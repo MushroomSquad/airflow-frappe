@@ -1,0 +1,9 @@
+{
+  "name": "AM Table Config Exclude Field",
+  "doctype": "DocType",
+  "module": "Airflow Manager",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "field_name", "fieldtype": "Data", "label": "Field Name", "reqd": 1, "in_list_view": 1}
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "AM Table Config Rename Field",
+  "doctype": "DocType",
+  "module": "Airflow Manager",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "source_field", "fieldtype": "Data", "label": "Source Field", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "target_field", "fieldtype": "Data", "label": "Target Field", "reqd": 1, "in_list_view": 1}
+  ]
+}
