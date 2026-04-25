@@ -42,7 +42,8 @@ def test_upsert_encrypts_password():
         upsert_connection({"conn_id": "test_conn", "password": "secret"})
     # Find the INSERT call and verify password is encrypted
     all_calls = session.execute.call_args_list
-    insert_call = [c for c in all_calls if "INSERT" in str(c)]
+    # text() objects don't show SQL in str(call) — extract via .text attribute
+    insert_call = [c for c in all_calls if "INSERT" in getattr(c[0][0], "text", "")]
     assert insert_call, "No INSERT call found"
     params = insert_call[0][0][1]
     assert params["password"] != "secret"
@@ -63,7 +64,7 @@ def test_upsert_preserves_existing_password_when_blank():
         from airflow_manager.airflow_db.connection_manager import upsert_connection
 
         upsert_connection({"conn_id": "test_conn", "password": ""})
-    update_call = [c for c in session.execute.call_args_list if "UPDATE" in str(c)]
+    update_call = [c for c in session.execute.call_args_list if "UPDATE" in getattr(c[0][0], "text", "")]
     assert update_call
     params = update_call[0][0][1]
     assert params["password"] == "existing_encrypted"

@@ -42,7 +42,7 @@ def test_set_variable_inserts_when_new():
         from airflow_manager.airflow_db.variable_manager import set_variable
 
         set_variable("NEW_VAR", '{"a": 1}')
-    calls = [str(c) for c in session.execute.call_args_list]
+    calls = [getattr(c[0][0], "text", "") for c in session.execute.call_args_list]
     assert any("INSERT" in c for c in calls)
 
 
@@ -54,5 +54,5 @@ def test_set_variable_updates_when_existing():
         from airflow_manager.airflow_db.variable_manager import set_variable
 
         set_variable("EXISTING", '{"b": 2}')
-    calls = [str(c) for c in session.execute.call_args_list]
+    calls = [getattr(c[0][0], "text", "") for c in session.execute.call_args_list]
     assert any("UPDATE" in c for c in calls)
