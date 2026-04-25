@@ -10,3 +10,4 @@ build/
 apps/airflow_manager/airflow_manager/airflow_manager/doctype/**/__pycache__/
 .venv/
 .codex/
+.env

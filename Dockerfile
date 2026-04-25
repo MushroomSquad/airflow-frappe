@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         libmariadb-dev \
         build-essential \
         mariadb-client \
+        cron \
     && npm install -g yarn \
     && rm -rf /var/lib/apt/lists/*
 
@@ -34,9 +35,13 @@ RUN bench init \
 
 WORKDIR /home/frappe/frappe-bench
 
-# Copy our app and install it into the bench venv
-COPY --chown=frappe:frappe apps/airflow_manager apps/airflow_manager
-RUN ./env/bin/pip install -e apps/airflow_manager
+# Install runtime deps into bench venv, then our app
+COPY --chown=frappe:frappe apps/frappe_airflow apps/frappe_airflow
+RUN ./env/bin/pip install sqlalchemy>=2.0 psycopg2-binary cryptography && \
+    ./env/bin/pip install -e apps/frappe_airflow
+
+# Disable SSL for mysql CLI client (used by bench during db bootstrap)
+RUN printf '[client]\nssl=0\n[mysqldump]\nssl=0\n' > /home/frappe/.my.cnf
 
 COPY --chown=frappe:frappe docker/entrypoint.sh /home/frappe/entrypoint.sh
 RUN chmod +x /home/frappe/entrypoint.sh

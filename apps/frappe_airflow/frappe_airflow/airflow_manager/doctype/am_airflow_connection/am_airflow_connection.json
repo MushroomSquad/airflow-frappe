@@ -1,0 +1,21 @@
+{
+  "name": "AM Airflow Connection",
+  "doctype": "DocType",
+  "module": "Airflow Manager",
+  "is_virtual": 1,
+  "autoname": "field:conn_id",
+  "title_field": "conn_id",
+  "fields": [
+    {"fieldname": "conn_id", "fieldtype": "Data", "label": "Connection ID", "reqd": 1, "in_list_view": 1},
+    {"fieldname": "conn_type", "fieldtype": "Select", "label": "Type",
+     "options": "wb_token\noz_seller\noz_performance\nms_token\nother", "in_list_view": 1},
+    {"fieldname": "cabinet", "fieldtype": "Link", "label": "Cabinet", "options": "AM Cabinet", "in_list_view": 1},
+    {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"},
+    {"fieldname": "api_token", "fieldtype": "Password", "label": "API Token"},
+    {"fieldname": "client_seller_id", "fieldtype": "Data", "label": "Client Seller ID"},
+    {"fieldname": "perf_id", "fieldtype": "Data", "label": "Performance Client ID"},
+    {"fieldname": "perf_secret", "fieldtype": "Password", "label": "Performance Secret"},
+    {"fieldname": "ms_token", "fieldtype": "Password", "label": "MoySklad Token"}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}]
+}

@@ -2,14 +2,13 @@ version: "3.9"
 
 services:
   frappe-mariadb:
-    image: mariadb:10.11
+    image: mariadb:10.6
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci --skip-ssl
     environment:
       MYSQL_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-frappe}
-      MYSQL_DATABASE: ${DB_NAME:-airflow_manager}
-      MYSQL_USER: ${DB_USER:-frappe}
-      MYSQL_PASSWORD: ${DB_PASSWORD:-frappe}
     volumes:
       - frappe-mariadb-data:/var/lib/mysql
+      - ./docker/mariadb.cnf:/etc/mysql/conf.d/local.cnf
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
       interval: 5s
@@ -20,18 +19,19 @@ services:
     image: redis:7-alpine
 
   frappe:
-    build: .
+    image: ${FRAPPE_IMAGE:-ghcr.io/fldrspro/frappe-airflow:latest}
+    build:
+      context: .
     environment:
-      DB_HOST: frappe-mariadb
+      DB_HOST: ${DB_HOST:-frappe-mariadb}
       DB_PORT: "3306"
-      DB_NAME: ${DB_NAME:-airflow_manager}
-      DB_USER: ${DB_USER:-frappe}
-      DB_PASSWORD: ${DB_PASSWORD:-frappe}
+      DB_NAME: ${DB_NAME:-frappe_airflow}
       FRAPPE_SITE_NAME: ${FRAPPE_SITE_NAME:-airflow-manager.localhost}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin}
-      # Airflow integration
-      AIRFLOW_DB_URL: ${AIRFLOW_DB_URL}
-      AIRFLOW_FERNET_KEY: ${AIRFLOW_FERNET_KEY}
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:-frappe}
+      REDIS_HOST: ${REDIS_HOST:-frappe-redis}
+      AIRFLOW_DB_URL: ${AIRFLOW_DB_URL:-}
+      AIRFLOW_FERNET_KEY: ${AIRFLOW_FERNET_KEY:-}
     ports:
       - "${FRAPPE_PORT:-8000}:8000"
     depends_on:

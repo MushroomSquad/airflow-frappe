@@ -1,0 +1,17 @@
+{
+  "doctype": "Workspace",
+  "name": "Airflow Manager",
+  "label": "Airflow Manager",
+  "module": "Airflow Manager",
+  "is_standard": 1,
+  "public": 1,
+  "icon": "server",
+  "indicator_color": "blue",
+  "title": "Airflow Manager",
+  "shortcuts": [
+    {"color": "Gray", "doc_view": "List", "label": "DAGs", "link_to": "AM Airflow DAG", "type": "DocType"},
+    {"color": "Orange", "doc_view": "List", "label": "Connections", "link_to": "AM Airflow Connection", "type": "DocType"},
+    {"color": "Orange", "doc_view": "List", "label": "Databases", "link_to": "AM Database Connection", "type": "DocType"}
+  ],
+  "content": "[{\"id\":\"s1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"DAGs\",\"col\":3}},{\"id\":\"s2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Connections\",\"col\":3}},{\"id\":\"s3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Databases\",\"col\":3}}]"
+}
