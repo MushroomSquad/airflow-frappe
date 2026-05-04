@@ -1,1 +1,0 @@
-recursive-include airflow_manager *.json *.js *.css *.html *.txt *.md
