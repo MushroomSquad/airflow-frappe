@@ -13,6 +13,12 @@ def after_install():
     frappe.db.commit()
 
 
+def after_migrate():
+    _setup_workspace()
+    _hide_default_workspaces()
+    frappe.db.commit()
+
+
 def set_default_workspace(login_manager):
     frappe.db.set_value(
         "User",

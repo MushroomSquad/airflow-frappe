@@ -8,6 +8,7 @@ app_include_js = []
 app_include_css = []
 
 after_install = "frappe_airflow.setup.after_install"
+after_migrate = "frappe_airflow.setup.after_migrate"
 on_session_creation = "frappe_airflow.setup.set_default_workspace"
 
 fixtures = [
