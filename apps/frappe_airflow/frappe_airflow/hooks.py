@@ -15,3 +15,7 @@ fixtures = [
 ]
 
 doc_events = {}
+
+override_whitelisted_methods = {
+    "frappe.desk.listview.get_group_by_count": "frappe_airflow.api.get_group_by_count"
+}
