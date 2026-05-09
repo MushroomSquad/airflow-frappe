@@ -25,6 +25,7 @@ class AMAirflowDAG(Document):
         try:
             return list_dags()
         except Exception:
+            frappe.log_error(frappe.get_traceback(), "AM Airflow DAG get_list failed")
             return []
 
     @staticmethod
@@ -32,6 +33,7 @@ class AMAirflowDAG(Document):
         try:
             return count_dags()
         except Exception:
+            frappe.log_error(frappe.get_traceback(), "AM Airflow DAG get_count failed")
             return 0
 
     @staticmethod
