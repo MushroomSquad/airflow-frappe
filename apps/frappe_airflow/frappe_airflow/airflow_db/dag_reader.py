@@ -56,6 +56,7 @@ def list_dags(paused: bool | None = None) -> list[dict]:
             ).fetchall()
         return [
             {
+                "name": r.dag_id,
                 "dag_id": r.dag_id,
                 "is_paused": bool(r.is_paused),
                 "schedule_interval": r.schedule_value or "",
@@ -75,6 +76,7 @@ def get_dag(dag_id: str) -> dict | None:
         if row is None:
             return None
         return {
+            "name": row.dag_id,
             "dag_id": row.dag_id,
             "is_paused": bool(row.is_paused),
             "schedule_interval": row.schedule_value or "",
