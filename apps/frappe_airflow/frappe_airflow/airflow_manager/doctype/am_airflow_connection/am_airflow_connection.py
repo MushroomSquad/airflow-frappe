@@ -9,6 +9,7 @@ from frappe_airflow.airflow_db.connection_manager import (
     list_connections,
     upsert_connection,
 )
+from frappe_airflow.doctype_utils import apply_virtual_row
 
 _PLATFORM_FIELDS = {
     "wb_token": {"api_token": "password"},
@@ -58,7 +59,7 @@ class AMAirflowConnection(Document):
         row = get_connection(self.name)
         if not row:
             frappe.throw(f"Connection {self.name} not found in Airflow")
-        self.update(_from_airflow_row(row))
+        apply_virtual_row(self, _from_airflow_row(row))
 
     def db_insert(self, *args, **kwargs):
         upsert_connection(_to_airflow_payload(self.as_dict()))

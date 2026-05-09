@@ -2,6 +2,7 @@ import frappe
 from frappe.model.document import Document
 
 from frappe_airflow.airflow_db.dag_reader import count_dags, get_dag, list_dags
+from frappe_airflow.doctype_utils import apply_virtual_row
 
 
 class AMAirflowDAG(Document):
@@ -9,7 +10,7 @@ class AMAirflowDAG(Document):
         row = get_dag(self.name)
         if not row:
             frappe.throw(f"DAG {self.name} not found in Airflow")
-        self.update(row)
+        apply_virtual_row(self, row)
 
     def db_insert(self, *args, **kwargs):
         frappe.throw("AM Airflow DAG is read-only")

@@ -8,6 +8,7 @@ from frappe_airflow.airflow_db.connection_manager import (
     list_connections,
     upsert_connection,
 )
+from frappe_airflow.doctype_utils import apply_virtual_row
 
 
 class AMDatabaseConnection(Document):
@@ -15,7 +16,8 @@ class AMDatabaseConnection(Document):
         row = get_connection(self.name)
         if not row:
             frappe.throw(f"Connection {self.name} not found in Airflow")
-        self.update(
+        apply_virtual_row(
+            self,
             {
                 "conn_id": row["conn_id"],
                 "host": row.get("host", ""),
@@ -24,7 +26,7 @@ class AMDatabaseConnection(Document):
                 "login": row.get("login", ""),
                 "password": None,
                 "description": row.get("description", ""),
-            }
+            },
         )
 
     def db_insert(self, *args, **kwargs):
