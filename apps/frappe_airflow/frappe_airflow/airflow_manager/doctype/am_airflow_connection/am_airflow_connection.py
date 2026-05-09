@@ -17,6 +17,13 @@ _PLATFORM_FIELDS = {
     "oz_performance": {"perf_id": "login", "perf_secret": "password"},
     "ms_token": {"ms_token": "password"},
 }
+_CABINET_CONNECTION_FIELDS = (
+    "wb_token_connection",
+    "oz_seller_connection",
+    "oz_performance_connection",
+    "ms_token_connection",
+    "ym_token_connection",
+)
 
 
 def _to_airflow_payload(doc_data: dict) -> dict:
@@ -54,12 +61,28 @@ def _from_airflow_row(row: dict, conn_type_hint: str = "") -> dict:
     return doc
 
 
+def _get_cabinet_by_connection(conn_id: str) -> str:
+    if not conn_id:
+        return ""
+
+    if not frappe.db.exists("DocType", "AM Cabinet"):
+        return ""
+
+    for fieldname in _CABINET_CONNECTION_FIELDS:
+        cabinet = frappe.db.get_value("AM Cabinet", {fieldname: conn_id}, "name")
+        if cabinet:
+            return cabinet
+    return ""
+
+
 class AMAirflowConnection(Document):
     def load_from_db(self):
         row = get_connection(self.name)
         if not row:
             frappe.throw(f"Connection {self.name} not found in Airflow")
-        apply_virtual_row(self, _from_airflow_row(row))
+        payload = _from_airflow_row(row)
+        payload["cabinet"] = _get_cabinet_by_connection(row.get("conn_id", ""))
+        apply_virtual_row(self, payload)
 
     def db_insert(self, *args, **kwargs):
         upsert_connection(_to_airflow_payload(self.as_dict()))
@@ -75,7 +98,10 @@ class AMAirflowConnection(Document):
         try:
             limit = args.get("page_length") or 20
             offset = args.get("start") or 0
-            return list_connections(limit=limit, offset=offset)
+            rows = list_connections(limit=limit, offset=offset)
+            for row in rows:
+                row["cabinet"] = _get_cabinet_by_connection(row.get("conn_id", ""))
+            return rows
         except Exception:
             return []
 
