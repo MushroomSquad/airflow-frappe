@@ -19,6 +19,41 @@ _PLATFORM_FIELDS = {
 }
 
 
+def _extract_search(args: dict) -> str | None:
+    for key in ("txt", "search"):
+        value = (args or {}).get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    for filter_group in ("filters", "or_filters"):
+        for item in (args or {}).get(filter_group) or []:
+            if not isinstance(item, (list, tuple)) or len(item) < 4:
+                continue
+            operator = str(item[2]).lower()
+            value = item[3]
+            if operator == "like" and isinstance(value, str):
+                value = value.strip("%").strip()
+                if value:
+                    return value
+    return None
+
+
+def _as_link_results(rows: list[dict]) -> list[tuple]:
+    results = []
+    for row in rows:
+        description = ", ".join(
+            part
+            for part in (
+                row.get("conn_type", ""),
+                row.get("description", ""),
+            )
+            if part
+        )
+        # Frappe search_link strips the last tuple item as an internal relevance column.
+        results.append((row["name"], description, 1))
+    return results
+
+
 def _to_airflow_payload(doc_data: dict) -> dict:
     """Map form fields to Airflow connection columns."""
     conn_type = doc_data.get("conn_type", "other")
@@ -76,7 +111,13 @@ class AMAirflowConnection(Document):
         try:
             limit = args.get("page_length") or 20
             offset = args.get("start") or 0
-            rows = list_connections(limit=limit, offset=offset)
+            rows = list_connections(
+                search=_extract_search(args),
+                limit=args.get("page_length") or args.get("limit_page_length") or limit,
+                offset=args.get("start") or args.get("limit_start") or offset,
+            )
+            if args.get("as_list"):
+                return _as_link_results(rows)
             return rows
         except Exception:
             return []

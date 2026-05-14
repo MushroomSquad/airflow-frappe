@@ -11,6 +11,42 @@ from frappe_airflow.airflow_db.connection_manager import (
 from frappe_airflow.doctype_utils import apply_virtual_row
 
 
+def _extract_search(args: dict) -> str | None:
+    for key in ("txt", "search"):
+        value = (args or {}).get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+
+    for filter_group in ("filters", "or_filters"):
+        for item in (args or {}).get(filter_group) or []:
+            if not isinstance(item, (list, tuple)) or len(item) < 4:
+                continue
+            operator = str(item[2]).lower()
+            value = item[3]
+            if operator == "like" and isinstance(value, str):
+                value = value.strip("%").strip()
+                if value:
+                    return value
+    return None
+
+
+def _as_link_results(rows: list[dict]) -> list[tuple]:
+    results = []
+    for row in rows:
+        description = ", ".join(
+            part
+            for part in (
+                row.get("host", ""),
+                row.get("schema", ""),
+                row.get("description", ""),
+            )
+            if part
+        )
+        # Frappe search_link strips the last tuple item as an internal relevance column.
+        results.append((row["name"], description, 1))
+    return results
+
+
 class AMDatabaseConnection(Document):
     def load_from_db(self):
         row = get_connection(self.name)
@@ -52,11 +88,15 @@ class AMDatabaseConnection(Document):
     @staticmethod
     def get_list(args):
         try:
-            return list_connections(
+            rows = list_connections(
                 conn_type="postgres",
-                limit=args.get("page_length") or 20,
-                offset=args.get("start") or 0,
+                search=_extract_search(args),
+                limit=(args.get("page_length") or args.get("limit_page_length") or 20),
+                offset=(args.get("start") or args.get("limit_start") or 0),
             )
+            if args.get("as_list"):
+                return _as_link_results(rows)
+            return rows
         except Exception:
             return []
 
