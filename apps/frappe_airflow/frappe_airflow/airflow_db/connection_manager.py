@@ -62,6 +62,7 @@ def list_connections(
         rows = s.execute(sql, params).fetchall()
         return [
             {
+                "name": r.conn_id,
                 "conn_id": r.conn_id,
                 "conn_type": r.conn_type or "",
                 "description": r.description or "",

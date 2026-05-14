@@ -91,3 +91,12 @@ def count_dags(paused: bool | None = None) -> int:
         return s.execute(
             text("SELECT COUNT(*) FROM dag WHERE is_paused = :p"), {"p": paused}
         ).scalar() or 0
+
+
+def set_dag_paused(dag_id: str, is_paused: bool) -> None:
+    """Set the paused state of a DAG in Airflow's metadata DB."""
+    with get_session() as s:
+        s.execute(
+            text("UPDATE dag SET is_paused = :paused WHERE dag_id = :dag_id"),
+            {"paused": is_paused, "dag_id": dag_id},
+        )

@@ -6,10 +6,15 @@
   "autoname": "field:dag_id",
   "title_field": "dag_id",
   "fields": [
-    {"fieldname": "dag_id", "fieldtype": "Data", "label": "DAG ID", "in_list_view": 1},
-    {"fieldname": "is_paused", "fieldtype": "Check", "label": "Paused", "in_list_view": 1, "read_only": 1},
+    {"fieldname": "dag_id", "fieldtype": "Data", "label": "DAG ID", "in_list_view": 1, "read_only": 1},
+    {"fieldname": "is_paused", "fieldtype": "Check", "label": "Paused", "in_list_view": 1},
     {"fieldname": "schedule_interval", "fieldtype": "Data", "label": "Schedule", "in_list_view": 1, "read_only": 1},
-    {"fieldname": "last_parsed_time", "fieldtype": "Datetime", "label": "Last Parsed", "in_list_view": 1, "read_only": 1}
+    {"fieldname": "last_parsed_time", "fieldtype": "Datetime", "label": "Last Parsed", "in_list_view": 1, "read_only": 1},
+    {"fieldname": "config_section", "fieldtype": "Section Break", "label": "Configuration"},
+    {"fieldname": "db_connection", "fieldtype": "Link", "label": "Default Database", "options": "AM Database Connection"},
+    {"fieldname": "connections", "fieldtype": "Table", "label": "Connections", "options": "AM DAG Connection"}
   ],
-  "permissions": [{"role": "System Manager", "read": 1}]
+  "permissions": [
+    {"role": "System Manager", "read": 1, "write": 1, "create": 0, "delete": 0}
+  ]
 }

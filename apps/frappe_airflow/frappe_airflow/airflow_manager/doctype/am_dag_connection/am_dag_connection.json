@@ -1,0 +1,10 @@
+{
+  "name": "AM DAG Connection",
+  "doctype": "DocType",
+  "module": "Airflow Manager",
+  "istable": 1,
+  "fields": [
+    {"fieldname": "connection", "fieldtype": "Link", "label": "Connection", "options": "AM Airflow Connection", "reqd": 1, "in_list_view": 1}
+  ],
+  "permissions": []
+}

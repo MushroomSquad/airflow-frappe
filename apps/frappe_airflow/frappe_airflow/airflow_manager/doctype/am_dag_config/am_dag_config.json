@@ -1,0 +1,13 @@
+{
+  "name": "AM DAG Config",
+  "doctype": "DocType",
+  "module": "Airflow Manager",
+  "autoname": "field:dag_id",
+  "title_field": "dag_id",
+  "fields": [
+    {"fieldname": "dag_id", "fieldtype": "Data", "label": "DAG ID", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "db_connection", "fieldtype": "Link", "label": "Default Database", "options": "AM Database Connection", "in_list_view": 1},
+    {"fieldname": "connections", "fieldtype": "Table", "label": "Connections", "options": "AM DAG Connection"}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}]
+}
