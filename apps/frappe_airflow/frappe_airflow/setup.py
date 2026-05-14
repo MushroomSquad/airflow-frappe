@@ -30,12 +30,10 @@ def set_default_workspace(login_manager):
 
 def _setup_workspace():
     shortcuts_data = [
-        ("Clients", "AM Client", "Blue"),
-        ("Cabinets", "AM Cabinet", "Blue"),
-        ("Table Configs", "AM Table Config", "Green"),
+        ("Connections", "AM Airflow Connection", "Orange"),
+        ("Databases", "AM Database Connection", "Orange"),
         ("DAGs", "AM Airflow DAG", "Gray"),
-        ("Raw Connections", "AM Airflow Connection", "Orange"),
-        ("Raw Databases", "AM Database Connection", "Orange"),
+        ("Table Configs", "AM Table Config", "Green"),
     ]
 
     if frappe.db.exists("Workspace", "Airflow Manager"):
