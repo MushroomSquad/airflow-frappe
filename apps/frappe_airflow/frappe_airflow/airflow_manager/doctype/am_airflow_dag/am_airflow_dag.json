@@ -12,8 +12,9 @@
     {"fieldname": "last_parsed_time", "fieldtype": "Datetime", "label": "Last Parsed", "in_list_view": 1, "read_only": 1},
     {"fieldname": "config_section", "fieldtype": "Section Break", "label": "Configuration"},
     {"fieldname": "db_connection", "fieldtype": "Link", "label": "Default Database", "options": "AM Database Connection"},
-    {"fieldname": "connections_summary", "fieldtype": "Small Text", "label": "Connections", "read_only": 1},
-    {"fieldname": "dag_config", "fieldtype": "Link", "label": "Configure Connections", "options": "AM DAG Config", "read_only": 1}
+    {"fieldname": "connections_section", "fieldtype": "Section Break", "label": "Connections"},
+    {"fieldname": "connection_options", "fieldtype": "Small Text", "hidden": 1, "read_only": 1},
+    {"fieldname": "selected_connections", "fieldtype": "Small Text", "hidden": 1}
   ],
   "permissions": [
     {"role": "System Manager", "read": 1, "write": 1, "create": 0, "delete": 0}

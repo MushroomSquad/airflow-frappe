@@ -44,6 +44,103 @@
     return options.map((row) => `${row.label}\n${row.value}`).join("\n");
   }
 
+  function connections_mount(frm) {
+    const section = frm.fields_dict.connections_section;
+    if (!section) {
+      return null;
+    }
+    const $section = $(section.wrapper).closest(".form-section");
+    const $body = $section.find(".section-body").first();
+    const $target = $body.length ? $body : $(section.wrapper);
+    let $mount = $target.find("> .dag-connections-mount");
+    if (!$mount.length) {
+      $mount = $('<div class="dag-connections-mount">').appendTo($target);
+    }
+    return $mount;
+  }
+
+  function paint_inline_checkboxes(frm, $mount, options) {
+    const selected = new Set(parse_selected_connections(frm.doc.selected_connections));
+
+    if (!options.length) {
+      $mount.html(
+        '<p class="text-muted" style="margin:0">' +
+          __("No marketplace connections match this DAG platform.") +
+          "</p>"
+      );
+      return;
+    }
+
+    const $grid = $('<div class="dag-conn-checkboxes"></div>').css({
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
+      gap: "10px",
+      padding: "4px 0 8px",
+    });
+
+    options.forEach((row) => {
+      const id = frappe.utils.escape_html(row.value);
+      const label = frappe.utils.escape_html(row.label);
+      const checked = selected.has(row.value) ? " checked" : "";
+      $grid.append(`
+        <label class="checkbox" style="display:flex;align-items:flex-start;gap:8px;margin:0;font-weight:normal">
+          <input type="checkbox" data-conn-id="${id}"${checked}>
+          <span>${label}</span>
+        </label>
+      `);
+    });
+
+    $mount.empty().append($grid);
+
+    $mount.find('input[type="checkbox"]').off("change").on("change", () => {
+      const conn_ids = [];
+      $mount.find('input[type="checkbox"]:checked').each((_, el) => {
+        conn_ids.push($(el).attr("data-conn-id"));
+      });
+      frm.doc.selected_connections = JSON.stringify(conn_ids);
+      frm.dirty();
+    });
+  }
+
+  function render_dag_inline_connections(frm) {
+    if (!frm.doc.dag_id) {
+      return;
+    }
+    const $mount = connections_mount(frm);
+    if (!$mount) {
+      return;
+    }
+
+    $mount.html(
+      '<p class="text-muted" style="margin:0">' + __("Loading connections...") + "</p>"
+    );
+
+    const apply = (options) => {
+      if (frm.doc.connection_options !== JSON.stringify(options)) {
+        frm.doc.connection_options = JSON.stringify(options);
+      }
+      paint_inline_checkboxes(frm, $mount, options);
+    };
+
+    const cached = parse_connection_options(frm.doc.connection_options);
+    if (cached.length) {
+      apply(cached);
+      return;
+    }
+
+    frappe.call({
+      method: "frappe_airflow.api.get_dag_connection_options",
+      args: { dag_id: frm.doc.dag_id },
+      callback(r) {
+        apply(r.message || []);
+      },
+      error(r) {
+        const msg = (r && r.message) || __("Failed to load connections");
+        $mount.html('<p class="text-danger" style="margin:0">' + frappe.utils.escape_html(msg) + "</p>");
+      },
+    });
+  }
+
   function setup_connections_multicheck(frm, dag_id) {
     const field = frm.fields_dict.selected_connections;
     if (!field || !dag_id) {
@@ -117,10 +214,12 @@
 
   frappe.ui.form.on("AM Airflow DAG", {
     refresh(frm) {
-      if (frm.doc.dag_config) {
-        frm.add_custom_button(__("Configure Connections"), () => {
-          frappe.set_route("Form", "AM DAG Config", frm.doc.dag_config);
-        });
+      setTimeout(() => render_dag_inline_connections(frm), 0);
+    },
+    before_save(frm) {
+      const value = frm.doc.selected_connections;
+      if (Array.isArray(value)) {
+        frm.doc.selected_connections = JSON.stringify(value);
       }
     },
   });
