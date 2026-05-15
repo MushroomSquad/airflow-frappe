@@ -12,7 +12,7 @@
     {"fieldname": "last_parsed_time", "fieldtype": "Datetime", "label": "Last Parsed", "in_list_view": 1, "read_only": 1},
     {"fieldname": "config_section", "fieldtype": "Section Break", "label": "Configuration"},
     {"fieldname": "db_connection", "fieldtype": "Link", "label": "Default Database", "options": "AM Database Connection"},
-    {"fieldname": "connections", "fieldtype": "Table", "label": "Connections", "options": "AM DAG Connection"}
+    {"fieldname": "selected_connections", "fieldtype": "MultiCheck", "label": "Connections", "columns": 2}
   ],
   "permissions": [
     {"role": "System Manager", "read": 1, "write": 1, "create": 0, "delete": 0}

@@ -51,12 +51,14 @@ def list_connections(
         if conn_type:
             filters.append("conn_type = :conn_type")
             params["conn_type"] = conn_type
+        elif conn_type is None:
+            filters.append("conn_type != 'postgres'")
         if search:
             filters.append("conn_id ILIKE :search")
             params["search"] = f"%{search}%"
         where = ("WHERE " + " AND ".join(filters)) if filters else ""
         sql = text(
-            "SELECT conn_id, conn_type, description, host, schema, login, port, "
+            "SELECT conn_id, conn_type, description, host, schema, login, port, extra, "
             f"is_encrypted FROM connection {where} ORDER BY conn_id LIMIT :limit OFFSET :offset"
         )
         rows = s.execute(sql, params).fetchall()
@@ -69,9 +71,15 @@ def list_connections(
                 "host": r.host or "",
                 "login": r.login or "",
                 "port": r.port,
+                "extra": r.extra or "",
             }
             for r in rows
         ]
+
+
+def list_marketplace_connections(limit: int = 500, offset: int = 0) -> list[dict]:
+    """All non-database marketplace connections."""
+    return list_connections(limit=limit, offset=offset)
 
 
 def count_connections(conn_type: str | None = None, search: str | None = None) -> int:
@@ -123,12 +131,13 @@ def upsert_connection(data: dict) -> None:
             encrypted_password = ""
             is_enc = False
 
+        extra = data.get("extra", "")
         if existing:
             s.execute(
                 text(
                     "UPDATE connection SET conn_type=:conn_type, description=:description, "
                     "host=:host, schema=:schema, login=:login, password=:password, "
-                    "port=:port, is_encrypted=:is_encrypted WHERE conn_id=:conn_id"
+                    "port=:port, extra=:extra, is_encrypted=:is_encrypted WHERE conn_id=:conn_id"
                 ),
                 {
                     "conn_id": conn_id,
@@ -139,6 +148,7 @@ def upsert_connection(data: dict) -> None:
                     "login": data.get("login", ""),
                     "password": encrypted_password,
                     "port": data.get("port"),
+                    "extra": extra,
                     "is_encrypted": is_enc,
                 },
             )
@@ -146,9 +156,9 @@ def upsert_connection(data: dict) -> None:
             s.execute(
                 text(
                     "INSERT INTO connection (conn_id, conn_type, description, host, schema, "
-                    "login, password, port, is_encrypted, is_extra_encrypted) "
+                    "login, password, port, extra, is_encrypted, is_extra_encrypted) "
                     "VALUES (:conn_id, :conn_type, :description, :host, :schema, "
-                    ":login, :password, :port, :is_encrypted, false)"
+                    ":login, :password, :port, :extra, :is_encrypted, false)"
                 ),
                 {
                     "conn_id": conn_id,
@@ -159,6 +169,7 @@ def upsert_connection(data: dict) -> None:
                     "login": data.get("login", ""),
                     "password": encrypted_password,
                     "port": data.get("port"),
+                    "extra": extra,
                     "is_encrypted": is_enc,
                 },
             )

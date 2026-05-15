@@ -17,6 +17,11 @@ fixtures = [
 
 doc_events = {}
 
+doctype_js = {
+    "AM Airflow DAG": "public/js/am_airflow_dag.js",
+    "AM Airflow Connection": "public/js/am_airflow_connection.js",
+}
+
 override_whitelisted_methods = {
     "frappe.desk.listview.get_group_by_count": "frappe_airflow.api.get_group_by_count"
 }
