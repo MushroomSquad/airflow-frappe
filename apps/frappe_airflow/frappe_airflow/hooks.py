@@ -4,7 +4,9 @@ app_publisher = "Fldrspro"
 app_description = "Manage Airflow connections, variables, and configuration"
 app_version = "0.1.0"
 
-app_include_js = []
+app_include_js = [
+    "public/js/dag_connections.js",
+]
 app_include_css = []
 
 after_install = "frappe_airflow.setup.after_install"
@@ -18,7 +20,6 @@ fixtures = [
 doc_events = {}
 
 doctype_js = {
-    "AM Airflow DAG": "public/js/am_airflow_dag.js",
     "AM Airflow Connection": "public/js/am_airflow_connection.js",
 }
 

@@ -19,6 +19,7 @@ from frappe_airflow.airflow_db.dag_platform import (
     CONN_TYPE_BY_PLATFORM,
     build_conn_id,
     default_conn_type_for_platform,
+    infer_connection_profile,
 )
 from frappe_airflow.doctype_utils import (
     apply_virtual_row,
@@ -77,15 +78,16 @@ def _to_airflow_payload(doc_data: dict) -> dict:
 
 
 def _from_airflow_row(row: dict) -> dict:
-    conn_type = row.get("conn_type") or "other"
     meta = unpack_extra(row.get("extra"))
+    profile = infer_connection_profile(row["conn_id"], row.get("conn_type") or "", meta)
+    conn_type = profile.get("conn_type") or row.get("conn_type") or "other"
     mapping = _PLATFORM_FIELDS.get(conn_type, {})
     doc = {
         "conn_id": row["conn_id"],
         "conn_type": conn_type,
         "description": row.get("description", ""),
-        "platform": meta.get("platform", ""),
-        "slug": meta.get("slug", ""),
+        "platform": meta.get("platform") or profile.get("platform", ""),
+        "slug": meta.get("slug") or profile.get("slug", ""),
         "display_name": meta.get("display_name", ""),
     }
     for form_field, airflow_field in mapping.items():
@@ -144,12 +146,21 @@ class AMAirflowConnection(Document):
                 limit=args.get("page_length") or args.get("limit_page_length") or 20,
                 offset=args.get("start") or args.get("limit_start") or 0,
             )
-            filtered = [
-                row for row in rows
-                if not unpack_extra(row.get("extra")).get("is_companion")
-            ]
+            filtered = []
+            for row in rows:
+                meta = unpack_extra(row.get("extra"))
+                profile = infer_connection_profile(
+                    row["conn_id"], row.get("conn_type") or "", meta
+                )
+                if profile.get("is_companion"):
+                    continue
+                doc = _from_airflow_row(row)
+                doc["name"] = row["conn_id"]
+                filtered.append(doc)
             if is_link_search(args):
-                return as_link_search_rows(filtered, ("conn_type", "slug", "description"))
+                return as_link_search_rows(
+                    filtered, ("platform", "conn_type", "slug", "description")
+                )
             return filtered
         except Exception:
             return []

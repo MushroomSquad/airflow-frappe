@@ -1,18 +1,16 @@
 from __future__ import annotations
 
+import json
+
 import frappe
 from frappe import _
 from frappe.desk.listview import get_group_by_count as core_get_group_by_count
 
-from frappe_airflow.airflow_db.connection_manager import list_marketplace_connections
-from frappe_airflow.airflow_db.connection_meta import unpack_extra
-from frappe_airflow.airflow_db.dag_connection_sync import get_selected_connections
+from frappe_airflow.airflow_db.dag_connection_options import build_dag_connection_options
 from frappe_airflow.airflow_db.dag_platform import (
     CONN_TYPE_BY_PLATFORM,
     build_conn_id,
-    conn_matches_dag,
     default_conn_type_for_platform,
-    infer_dag_platform,
 )
 
 
@@ -39,24 +37,17 @@ def get_group_by_count(doctype: str, current_filters=None, field: str | None = N
 
 @frappe.whitelist()
 def get_dag_connection_options(dag_id: str) -> list[dict[str, str]]:
-    """Return MultiCheck options for connections compatible with this DAG."""
-    platform = infer_dag_platform(dag_id)
-    options: list[dict[str, str]] = []
+    """Return checkbox options for connections compatible with this DAG."""
+    return build_dag_connection_options(dag_id)
 
-    for row in list_marketplace_connections(limit=500):
-        meta = unpack_extra(row.get("extra"))
-        if meta.get("is_companion"):
-            continue
-        conn_type = row.get("conn_type") or ""
-        if not conn_matches_dag(conn_type, platform, dag_id):
-            continue
-        slug = meta.get("slug", "")
-        label = row["conn_id"]
-        if slug:
-            label = f"{row['conn_id']} ({slug})"
-        options.append({"label": label, "value": row["conn_id"]})
 
-    return options
+@frappe.whitelist()
+def prepare_dag_config_form(dag_id: str) -> dict[str, str]:
+    """Populate hidden connection_options before rendering MultiCheck."""
+    options = build_dag_connection_options(dag_id)
+    return {
+        "connection_options": json.dumps(options, ensure_ascii=False),
+    }
 
 
 @frappe.whitelist()

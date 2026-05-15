@@ -5,9 +5,10 @@
   "autoname": "field:dag_id",
   "title_field": "dag_id",
   "fields": [
-    {"fieldname": "dag_id", "fieldtype": "Data", "label": "DAG ID", "reqd": 1, "unique": 1, "in_list_view": 1},
+    {"fieldname": "dag_id", "fieldtype": "Data", "label": "DAG ID", "reqd": 1, "unique": 1, "in_list_view": 1, "read_only": 1},
     {"fieldname": "db_connection", "fieldtype": "Link", "label": "Default Database", "options": "AM Database Connection", "in_list_view": 1},
-    {"fieldname": "selected_connections", "fieldtype": "Small Text", "label": "Selected Connections", "hidden": 1},
+    {"fieldname": "connection_options", "fieldtype": "Small Text", "hidden": 1, "read_only": 1},
+    {"fieldname": "selected_connections", "fieldtype": "MultiCheck", "label": "Connections", "columns": 2},
     {"fieldname": "connections", "fieldtype": "Table", "label": "Connections", "options": "AM DAG Connection", "hidden": 1}
   ],
   "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}]

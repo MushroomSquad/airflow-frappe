@@ -70,7 +70,7 @@ def assign_connection_to_matching_dags(conn_id: str, conn_type: str) -> None:
     for dag in list_dags():
         dag_id = dag["dag_id"]
         platform = infer_dag_platform(dag_id)
-        if conn_matches_dag(conn_type, platform, dag_id):
+        if conn_matches_dag(conn_type, platform, dag_id, conn_id=conn_id):
             add_connection_to_dag_config(dag_id, conn_id)
 
 

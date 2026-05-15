@@ -2,8 +2,10 @@ from frappe_airflow.airflow_db.dag_platform import (
     build_conn_id,
     companion_conn_ids,
     conn_matches_dag,
+    infer_connection_profile,
     infer_dag_platform,
     is_perf_dag,
+    normalize_conn_type,
 )
 
 
@@ -41,3 +43,18 @@ def test_build_conn_id_wb():
 def test_companion_conn_ids_oz():
     assert companion_conn_ids("oz_seller", "foo") == ["oz_client_seller_id_foo"]
     assert companion_conn_ids("oz_perf", "foo") == ["oz_client_perf_secret_foo"]
+
+
+def test_normalize_legacy_wb_conn_id():
+    assert normalize_conn_type("wb_filippov", "other") == "wb"
+
+
+def test_infer_connection_profile_legacy_wb():
+    profile = infer_connection_profile("wb_filippov", "other", {})
+    assert profile["platform"] == "wb"
+    assert profile["slug"] == "filippov"
+    assert profile["conn_type"] == "wb"
+
+
+def test_conn_matches_legacy_wb_on_wb_dag():
+    assert conn_matches_dag("other", "wb", "wb_orders_etl_dag", conn_id="wb_filippov") is True
