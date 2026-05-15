@@ -8,43 +8,12 @@ from frappe_airflow.airflow_db.connection_manager import (
     list_connections,
     upsert_connection,
 )
-from frappe_airflow.doctype_utils import apply_virtual_row
-
-
-def _extract_search(args: dict) -> str | None:
-    for key in ("txt", "search"):
-        value = (args or {}).get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-
-    for filter_group in ("filters", "or_filters"):
-        for item in (args or {}).get(filter_group) or []:
-            if not isinstance(item, (list, tuple)) or len(item) < 4:
-                continue
-            operator = str(item[2]).lower()
-            value = item[3]
-            if operator == "like" and isinstance(value, str):
-                value = value.strip("%").strip()
-                if value:
-                    return value
-    return None
-
-
-def _as_link_results(rows: list[dict]) -> list[tuple]:
-    results = []
-    for row in rows:
-        description = ", ".join(
-            part
-            for part in (
-                row.get("host", ""),
-                row.get("schema", ""),
-                row.get("description", ""),
-            )
-            if part
-        )
-        # Frappe search_link strips the last tuple item as an internal relevance column.
-        results.append((row["name"], description, 1))
-    return results
+from frappe_airflow.doctype_utils import (
+    apply_virtual_row,
+    as_link_search_rows,
+    extract_search_text,
+    is_link_search,
+)
 
 
 class AMDatabaseConnection(Document):
@@ -90,12 +59,12 @@ class AMDatabaseConnection(Document):
         try:
             rows = list_connections(
                 conn_type="postgres",
-                search=_extract_search(args),
+                search=extract_search_text(args),
                 limit=(args.get("page_length") or args.get("limit_page_length") or 20),
                 offset=(args.get("start") or args.get("limit_start") or 0),
             )
-            if args.get("as_list"):
-                return _as_link_results(rows)
+            if is_link_search(args):
+                return as_link_search_rows(rows, ("host", "schema", "description"))
             return rows
         except Exception:
             return []
