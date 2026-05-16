@@ -64,9 +64,10 @@
       if (!$fallback.length) {
         $fallback = $(
           '<div class="form-section card-section dag-connections-fallback">' +
-            '<motion.div class="section-head section-head collapsible">'.replace("motion.", "") +
+            '<motion.div class="section-head">'.replace("motion.", "") +
             __("Connections") +
-            '</div><div class="section-body"></div></div>'
+            '</motion.div>'.replace("motion.", "") +
+            '<div class="section-body"></div></div>'
         );
         $(anchor.$wrapper).closest(".form-layout").append($fallback);
       }
@@ -78,11 +79,17 @@
     }
 
     const $section = $(section.wrapper).closest(".form-section");
-    const $body = $section.find(".section-body").first();
-    const $target = $body.length ? $body : $(section.wrapper);
-    let $mount = $target.find("> .dag-connections-mount");
+    if (!$section.length) {
+      let $mount = $(section.wrapper).siblings(".dag-connections-mount");
+      if (!$mount.length) {
+        $mount = $('<div class="dag-connections-mount">').insertAfter(section.wrapper);
+      }
+      return $mount;
+    }
+    let $mount = $section.find(".dag-connections-mount").first();
     if (!$mount.length) {
-      $mount = $('<div class="dag-connections-mount">').appendTo($target);
+      const $body = $section.find(".section-body").first();
+      $mount = $('<div class="dag-connections-mount">').appendTo($body.length ? $body : $section);
     }
     return $mount;
   }
@@ -242,9 +249,17 @@
     },
   });
 
+  function schedule_dag_connections(frm) {
+    setTimeout(() => render_dag_inline_connections(frm), 0);
+    setTimeout(() => render_dag_inline_connections(frm), 400);
+  }
+
   frappe.ui.form.on("AM Airflow DAG", {
+    onload(frm) {
+      schedule_dag_connections(frm);
+    },
     refresh(frm) {
-      setTimeout(() => render_dag_inline_connections(frm), 0);
+      schedule_dag_connections(frm);
     },
     before_save(frm) {
       const value = frm.doc.selected_connections;
