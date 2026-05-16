@@ -22,10 +22,11 @@ def build_dag_connection_options(dag_id: str) -> list[dict[str, str]]:
         conn_type = profile.get("conn_type") or ""
         if not conn_matches_dag(conn_type, platform, dag_id, conn_id=row["conn_id"]):
             continue
-        slug = profile.get("slug") or meta.get("slug", "")
-        label = row["conn_id"]
-        if slug:
-            label = f"{row['conn_id']} ({slug})"
-        options.append({"label": label, "value": row["conn_id"]})
+        display_name = (meta.get("display_name") or "").strip()
+        conn_id = row["conn_id"]
+        label = display_name or conn_id
+        if display_name and display_name != conn_id:
+            label = f"{display_name} ({conn_id})"
+        options.append({"label": label, "value": conn_id})
 
     return options

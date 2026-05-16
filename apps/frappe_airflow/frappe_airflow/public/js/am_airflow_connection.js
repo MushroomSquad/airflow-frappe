@@ -2,12 +2,15 @@ const CONN_TYPES_BY_PLATFORM = {
   wb: ["wb"],
   oz: ["oz_seller", "oz_perf"],
   ms: ["ms"],
-  ym: ["other"],
+  ym: ["ym"],
+  amo: ["amo"],
+  bitrix: ["bitrix"],
+  iiko: ["iiko"],
 };
 
 function update_conn_type_options(frm) {
   const platform = frm.doc.platform;
-  const allowed = CONN_TYPES_BY_PLATFORM[platform] || ["other"];
+  const allowed = CONN_TYPES_BY_PLATFORM[platform] || ["ym"];
   const options = allowed.join("\n");
   frm.set_df_property("conn_type", "options", options);
   if (frm.doc.conn_type && !allowed.includes(frm.doc.conn_type)) {

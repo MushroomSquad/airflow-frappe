@@ -5,14 +5,38 @@ import json
 from typing import Any
 
 
-def pack_extra(platform: str = "", slug: str = "", display_name: str = "", **kwargs: Any) -> str:
-    payload = {k: v for k, v in {
-        "platform": platform or "",
-        "slug": slug or "",
-        "display_name": display_name or "",
+_META_KEYS = ("platform", "slug", "display_name", "target_db_connection")
+
+
+def pack_extra(
+    platform: str = "",
+    slug: str = "",
+    display_name: str = "",
+    target_db_connection: str = "",
+    existing_extra: str | None = None,
+    **kwargs: Any,
+) -> str:
+    """Build extra JSON, merging with existing_extra when provided."""
+    base: dict[str, Any] = {}
+    if existing_extra:
+        base.update(unpack_extra(existing_extra))
+
+    updates = {
+        "platform": platform,
+        "slug": slug,
+        "display_name": display_name,
+        "target_db_connection": target_db_connection,
         **kwargs,
-    }.items() if v}
-    return json.dumps(payload, ensure_ascii=False) if payload else ""
+    }
+    for key, value in updates.items():
+        if value is not None and value != "":
+            base[key] = value
+        elif key in base and value == "":
+            base.pop(key, None)
+
+    if not base:
+        return ""
+    return json.dumps(base, ensure_ascii=False)
 
 
 def unpack_extra(raw: str | None) -> dict[str, str]:

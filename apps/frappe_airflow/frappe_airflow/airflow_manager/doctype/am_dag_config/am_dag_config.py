@@ -30,4 +30,13 @@ class AMDAGConfig(Document):
     def validate(self):
         conn_ids = _parse_multicheck(self.selected_connections)
         self.selected_connections = _dump_selected(conn_ids)
-        self.set("connections", [{"connection": conn_id} for conn_id in conn_ids])
+
+    def on_update(self):
+        from frappe_airflow.airflow_db.dag_registry_sync import rebuild_dag_registry_entry
+
+        rebuild_dag_registry_entry(self.dag_id)
+
+    def on_trash(self):
+        from frappe_airflow.airflow_db.dag_registry_sync import rebuild_dag_registry_entry
+
+        rebuild_dag_registry_entry(self.dag_id)

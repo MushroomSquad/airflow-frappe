@@ -45,16 +45,6 @@ def _parse_selected(value) -> list[str]:
     return []
 
 
-def _load_dag_config(dag_id: str) -> dict:
-    if not frappe.db.exists("AM DAG Config", dag_id):
-        return {"db_connection": "", "selected_connections": []}
-    config = frappe.get_doc("AM DAG Config", dag_id)
-    return {
-        "db_connection": config.db_connection or "",
-        "selected_connections": get_selected_connections(dag_id),
-    }
-
-
 class AMAirflowDAG(Document):
     def load_from_db(self):
         row = get_dag(self.name)
@@ -63,12 +53,8 @@ class AMAirflowDAG(Document):
         apply_virtual_row(self, row)
 
         _ensure_dag_config(self.name)
-        config = _load_dag_config(self.name)
-        self.db_connection = config.get("db_connection", "")
-        self.selected_connections = json.dumps(
-            config.get("selected_connections", []),
-            ensure_ascii=False,
-        )
+        selected = get_selected_connections(self.name)
+        self.selected_connections = json.dumps(selected, ensure_ascii=False)
 
         try:
             options = build_dag_connection_options(self.name)
@@ -84,11 +70,7 @@ class AMAirflowDAG(Document):
         set_dag_paused(self.dag_id, bool(self.is_paused))
         _ensure_dag_config(self.dag_id)
         conn_ids = _parse_selected(self.selected_connections)
-        set_selected_connections(
-            self.dag_id,
-            conn_ids,
-            db_connection=self.db_connection or "",
-        )
+        set_selected_connections(self.dag_id, conn_ids)
 
     def delete(self):
         frappe.throw("AM Airflow DAG cannot be deleted from here")

@@ -1,5 +1,6 @@
 """Virtual DocType - reads and writes directly to Airflow's connection table."""
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 from frappe_airflow.airflow_db.connection_manager import (
@@ -28,17 +29,22 @@ from frappe_airflow.doctype_utils import (
     is_link_search,
 )
 
-_PLATFORM_FIELDS = {
+# form_field -> airflow connection column
+_PLATFORM_FIELDS: dict[str, dict[str, str]] = {
     "wb": {"api_token": "password"},
     "oz_seller": {"api_token": "password", "client_seller_id": "login"},
     "oz_perf": {"perf_id": "login", "perf_secret": "password"},
     "ms": {"ms_token": "password"},
+    "ym": {"api_token": "password"},
+    "amo": {"api_token": "password"},
+    "bitrix": {"host": "host", "login": "login", "password": "password"},
+    "iiko": {"host": "host", "login": "login", "password": "password"},
 }
 
 
 def _resolve_conn_type(doc_data: dict) -> str:
     conn_type = doc_data.get("conn_type") or ""
-    if conn_type and conn_type != "other":
+    if conn_type and conn_type not in ("other",):
         return conn_type
     platform = doc_data.get("platform") or ""
     return default_conn_type_for_platform(platform)
@@ -55,32 +61,41 @@ def _resolve_conn_id(doc_data: dict) -> str:
     return conn_id
 
 
-def _to_airflow_payload(doc_data: dict) -> dict:
+def _existing_extra(conn_id: str) -> str | None:
+    if not conn_id:
+        return None
+    row = get_connection(conn_id)
+    if not row:
+        return None
+    return row.get("extra")
+
+
+def _to_airflow_payload(doc_data: dict, existing_extra: str | None = None) -> dict:
     conn_type = _resolve_conn_type(doc_data)
     mapping = _PLATFORM_FIELDS.get(conn_type, {})
+    conn_id = _resolve_conn_id(doc_data)
     payload = {
-        "conn_id": _resolve_conn_id(doc_data),
+        "conn_id": conn_id,
         "conn_type": conn_type,
         "description": doc_data.get("description", ""),
         "extra": pack_extra(
             platform=doc_data.get("platform", ""),
             slug=doc_data.get("slug", ""),
             display_name=doc_data.get("display_name", ""),
+            target_db_connection=doc_data.get("target_db_connection", ""),
+            existing_extra=existing_extra or _existing_extra(conn_id),
         ),
     }
     for form_field, airflow_field in mapping.items():
         val = doc_data.get(form_field) or ""
-        if airflow_field == "password":
-            payload["password"] = val
-        elif airflow_field == "login":
-            payload["login"] = val
+        payload[airflow_field] = val
     return payload
 
 
 def _from_airflow_row(row: dict) -> dict:
     meta = unpack_extra(row.get("extra"))
     profile = infer_connection_profile(row["conn_id"], row.get("conn_type") or "", meta)
-    conn_type = profile.get("conn_type") or row.get("conn_type") or "other"
+    conn_type = profile.get("conn_type") or row.get("conn_type") or "ym"
     mapping = _PLATFORM_FIELDS.get(conn_type, {})
     doc = {
         "conn_id": row["conn_id"],
@@ -89,22 +104,39 @@ def _from_airflow_row(row: dict) -> dict:
         "platform": meta.get("platform") or profile.get("platform", ""),
         "slug": meta.get("slug") or profile.get("slug", ""),
         "display_name": meta.get("display_name", ""),
+        "target_db_connection": meta.get("target_db_connection", ""),
     }
     for form_field, airflow_field in mapping.items():
         if airflow_field == "password":
             doc[form_field] = None
-        elif airflow_field == "login":
-            doc[form_field] = row.get("login", "")
+        else:
+            doc[form_field] = row.get(airflow_field, "") or ""
     return doc
+
+
+def _sync_connection_registry(conn_id: str) -> None:
+    from frappe_airflow.airflow_db.connection_registry_sync import rebuild_connection_registry_entry
+
+    rebuild_connection_registry_entry(conn_id)
+
+
+def _remove_connection_registry(conn_id: str) -> None:
+    from frappe_airflow.airflow_db.connection_registry_sync import remove_connection_registry_entry
+
+    remove_connection_registry_entry(conn_id)
 
 
 class AMAirflowConnection(Document):
     def validate(self):
+        if not (self.display_name or "").strip():
+            frappe.throw(_("Display Name is required"))
+        if not (self.target_db_connection or "").strip():
+            frappe.throw(_("Target Database is required"))
         if self.platform and not self.conn_type:
             self.conn_type = default_conn_type_for_platform(self.platform)
         allowed = CONN_TYPE_BY_PLATFORM.get(self.platform or "", ())
         if self.platform and self.conn_type and self.conn_type not in allowed:
-            frappe.throw(f"Connection type {self.conn_type} is not valid for {self.platform}")
+            frappe.throw(_("Connection type {0} is not valid for {1}").format(self.conn_type, self.platform))
         if self.slug and not self.conn_id:
             self.conn_id = build_conn_id(_resolve_conn_type(self.as_dict()), self.slug)
 
@@ -123,20 +155,25 @@ class AMAirflowConnection(Document):
         upsert_connection(payload)
         sync_companion_connections(doc_data)
         assign_connection_to_matching_dags(payload["conn_id"], payload["conn_type"])
+        _sync_connection_registry(payload["conn_id"])
 
     def db_update(self, *args, **kwargs):
         doc_data = self.as_dict()
-        payload = _to_airflow_payload(doc_data)
+        existing = _existing_extra(self.conn_id or self.name)
+        payload = _to_airflow_payload(doc_data, existing_extra=existing)
         upsert_connection(payload)
         sync_companion_connections(doc_data)
+        _sync_connection_registry(payload["conn_id"])
 
     def delete(self):
         row = get_connection(self.name) or {}
         meta = unpack_extra(row.get("extra"))
         slug = meta.get("slug", "") or self.slug or ""
         conn_type = row.get("conn_type") or self.conn_type or ""
+        conn_id = self.name
         remove_companion_connections(conn_type, slug)
-        delete_connection(self.name)
+        delete_connection(conn_id)
+        _remove_connection_registry(conn_id)
 
     @staticmethod
     def get_list(args):
@@ -159,7 +196,8 @@ class AMAirflowConnection(Document):
                 filtered.append(doc)
             if is_link_search(args):
                 return as_link_search_rows(
-                    filtered, ("platform", "conn_type", "slug", "description")
+                    filtered,
+                    ("display_name", "conn_id", "platform", "conn_type", "slug"),
                 )
             return filtered
         except Exception:

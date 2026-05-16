@@ -36,23 +36,19 @@ def get_selected_connections(dag_id: str) -> list[str]:
     return _parse_selected(raw)
 
 
-def set_selected_connections(dag_id: str, conn_ids: list[str], db_connection: str | None = None) -> None:
+def set_selected_connections(dag_id: str, conn_ids: list[str]) -> None:
     payload = _dump_selected(conn_ids)
     if frappe.db.exists("AM DAG Config", dag_id):
-        values = {"selected_connections": payload}
-        if db_connection is not None:
-            values["db_connection"] = db_connection
-        frappe.db.set_value("AM DAG Config", dag_id, values)
-        _sync_child_table(dag_id, conn_ids)
+        frappe.db.set_value("AM DAG Config", dag_id, "selected_connections", payload)
     else:
         doc = frappe.get_doc({
             "doctype": "AM DAG Config",
             "dag_id": dag_id,
-            "db_connection": db_connection or "",
             "selected_connections": payload,
         })
         doc.insert(ignore_permissions=True)
     frappe.db.commit()
+    _sync_dag_registry(dag_id)
 
 
 def add_connection_to_dag_config(dag_id: str, conn_id: str) -> None:
@@ -60,10 +56,7 @@ def add_connection_to_dag_config(dag_id: str, conn_id: str) -> None:
     if conn_id in selected:
         return
     selected.append(conn_id)
-    db_connection = frappe.db.get_value("AM DAG Config", dag_id, "db_connection") if frappe.db.exists(
-        "AM DAG Config", dag_id
-    ) else ""
-    set_selected_connections(dag_id, selected, db_connection=db_connection or "")
+    set_selected_connections(dag_id, selected)
 
 
 def assign_connection_to_matching_dags(conn_id: str, conn_type: str) -> None:
@@ -74,10 +67,7 @@ def assign_connection_to_matching_dags(conn_id: str, conn_type: str) -> None:
             add_connection_to_dag_config(dag_id, conn_id)
 
 
-def _sync_child_table(dag_id: str, conn_ids: list[str]) -> None:
-    """Keep legacy child table in sync for any code still reading it."""
-    if not frappe.db.exists("AM DAG Config", dag_id):
-        return
-    config = frappe.get_doc("AM DAG Config", dag_id)
-    config.set("connections", [{"connection": conn_id} for conn_id in conn_ids])
-    config.save(ignore_permissions=True)
+def _sync_dag_registry(dag_id: str) -> None:
+    from frappe_airflow.airflow_db.dag_registry_sync import rebuild_dag_registry_entry
+
+    rebuild_dag_registry_entry(dag_id)

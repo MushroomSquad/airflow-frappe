@@ -58,3 +58,15 @@ def test_infer_connection_profile_legacy_wb():
 
 def test_conn_matches_legacy_wb_on_wb_dag():
     assert conn_matches_dag("other", "wb", "wb_orders_etl_dag", conn_id="wb_filippov") is True
+
+
+def test_conn_matches_amo_on_amo_dag():
+    assert conn_matches_dag("amo", "amo", "amo_leads_etl_dag", conn_id="amocrm_api_token_demo") is True
+
+
+def test_build_conn_id_ym():
+    assert build_conn_id("ym", "shop1") == "ym_api_token_shop1"
+
+
+def test_build_conn_id_amo():
+    assert build_conn_id("amo", "demo") == "amocrm_api_token_demo"
