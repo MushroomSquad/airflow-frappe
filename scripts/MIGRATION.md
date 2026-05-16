@@ -42,6 +42,17 @@ bench --site SITE execute frappe_airflow.migrate_connections.diagnose_client_reg
 5. Verify `CONNECTION_REGISTRY`, `DAG_REGISTRY`, `dag_table_config_*` in Admin → Variables.
 6. After successful DAG runs, remove `CLIENT_REGISTRY`.
 
+## Cleanup migration garbage (test / reset)
+
+```bash
+DRY_RUN=1 bench --site SITE execute frappe_airflow.cleanup_migration.run
+DRY_RUN=0 bench --site SITE execute frappe_airflow.cleanup_migration.run
+```
+
+Removes: empty marketplace connections (no password), migration keys in `extra`,
+all `AM DAG Config`, `CONNECTION_REGISTRY`, `DAG_REGISTRY`. Does not touch `CLIENT_REGISTRY`
+or connections that still have passwords.
+
 ## Model
 
 1. `AM Airflow Connection` — marketplace credentials + `target_db_connection`
