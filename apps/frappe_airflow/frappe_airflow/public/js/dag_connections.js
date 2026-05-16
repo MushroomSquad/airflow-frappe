@@ -1,8 +1,8 @@
 (function () {
-  if (window.__frappe_airflow_dag_connections) {
+  if (window.__frappe_airflow_dag_connections_handlers) {
     return;
   }
-  window.__frappe_airflow_dag_connections = true;
+  window.__frappe_airflow_dag_connections_handlers = true;
 
   function parse_selected_connections(raw) {
     if (!raw) {
@@ -45,10 +45,38 @@
   }
 
   function connections_mount(frm) {
+    const html_field = frm.fields_dict.connections_ui;
+    if (html_field && html_field.$wrapper) {
+      let $mount = html_field.$wrapper.find("> .dag-connections-mount");
+      if (!$mount.length) {
+        $mount = $('<div class="dag-connections-mount">').appendTo(html_field.$wrapper);
+      }
+      return $mount;
+    }
+
     const section = frm.fields_dict.connections_section;
     if (!section) {
-      return null;
+      const anchor = frm.fields_dict.last_parsed_time || frm.fields_dict.schedule_interval;
+      if (!anchor || !anchor.$wrapper) {
+        return null;
+      }
+      let $fallback = $(anchor.$wrapper).closest(".form-page").find(".dag-connections-fallback");
+      if (!$fallback.length) {
+        $fallback = $(
+          '<div class="form-section card-section dag-connections-fallback">' +
+            '<motion.div class="section-head section-head collapsible">'.replace("motion.", "") +
+            __("Connections") +
+            '</div><div class="section-body"></div></div>'
+        );
+        $(anchor.$wrapper).closest(".form-layout").append($fallback);
+      }
+      let $mount = $fallback.find(".section-body > .dag-connections-mount");
+      if (!$mount.length) {
+        $mount = $('<div class="dag-connections-mount">').appendTo($fallback.find(".section-body"));
+      }
+      return $mount;
     }
+
     const $section = $(section.wrapper).closest(".form-section");
     const $body = $section.find(".section-body").first();
     const $target = $body.length ? $body : $(section.wrapper);
@@ -71,7 +99,7 @@
       return;
     }
 
-    const $grid = $('<div class="dag-conn-checkboxes"></div>').css({
+    const $grid = $('<div class="dag-conn-checkboxes">').css({
       display: "grid",
       gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
       gap: "10px",
@@ -136,7 +164,9 @@
       },
       error(r) {
         const msg = (r && r.message) || __("Failed to load connections");
-        $mount.html('<p class="text-danger" style="margin:0">' + frappe.utils.escape_html(msg) + "</p>");
+        $mount.html(
+          '<p class="text-danger" style="margin:0">' + frappe.utils.escape_html(msg) + "</p>"
+        );
       },
     });
   }

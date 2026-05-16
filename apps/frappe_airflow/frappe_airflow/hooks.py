@@ -21,6 +21,8 @@ doc_events = {}
 
 doctype_js = {
     "AM Airflow Connection": "public/js/am_airflow_connection.js",
+    "AM Airflow DAG": "public/js/dag_connections.js",
+    "AM DAG Config": "public/js/dag_connections.js",
 }
 
 override_whitelisted_methods = {

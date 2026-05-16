@@ -12,6 +12,7 @@
     {"fieldname": "last_parsed_time", "fieldtype": "Datetime", "label": "Last Parsed", "in_list_view": 1, "read_only": 1},
     {"fieldname": "config_section", "fieldtype": "Section Break", "label": "Configuration"},
     {"fieldname": "connections_section", "fieldtype": "Section Break", "label": "Connections"},
+    {"fieldname": "connections_ui", "fieldtype": "HTML", "label": "Active connections", "options": ""},
     {"fieldname": "connection_options", "fieldtype": "Small Text", "hidden": 1, "read_only": 1},
     {"fieldname": "selected_connections", "fieldtype": "Small Text", "hidden": 1}
   ],
