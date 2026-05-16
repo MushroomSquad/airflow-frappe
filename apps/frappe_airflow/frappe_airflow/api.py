@@ -61,3 +61,29 @@ def preview_conn_id(platform: str = "", conn_type: str = "", slug: str = "") -> 
 @frappe.whitelist()
 def get_conn_type_options(platform: str) -> list[str]:
     return list(CONN_TYPE_BY_PLATFORM.get(platform, ("other",)))
+
+
+@frappe.whitelist()
+def get_dag_table_configs(dag_id: str) -> list[dict]:
+    """List AM Table Config rows for a DAG (for embedded DAG form UI)."""
+    if not dag_id:
+        return []
+    rows = frappe.get_all(
+        "AM Table Config",
+        filters={"dag_id": dag_id},
+        fields=[
+            "name",
+            "table_name",
+            "scope",
+            "connection",
+            "enabled",
+            "load_strategy",
+            "incremental_days",
+            "auto_alter",
+        ],
+        order_by="table_name asc",
+    )
+    for row in rows:
+        row["enabled"] = bool(row.get("enabled"))
+        row["auto_alter"] = bool(row.get("auto_alter"))
+    return rows

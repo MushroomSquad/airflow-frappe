@@ -6,6 +6,7 @@ app_version = "0.1.0"
 
 app_include_js = [
     "public/js/dag_connections.js",
+    "public/js/dag_table_configs.js",
 ]
 app_include_css = []
 
@@ -21,7 +22,10 @@ doc_events = {}
 
 doctype_js = {
     "AM Airflow Connection": "public/js/am_airflow_connection.js",
-    "AM Airflow DAG": "public/js/dag_connections.js",
+    "AM Airflow DAG": [
+        "public/js/dag_connections.js",
+        "public/js/dag_table_configs.js",
+    ],
     "AM DAG Config": "public/js/dag_connections.js",
 }
 

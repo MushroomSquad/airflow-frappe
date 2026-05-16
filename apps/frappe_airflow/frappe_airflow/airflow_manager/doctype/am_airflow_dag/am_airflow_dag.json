@@ -14,7 +14,9 @@
     {"fieldname": "connections_section", "fieldtype": "Section Break", "label": "Connections"},
     {"fieldname": "connections_ui", "fieldtype": "HTML", "label": "Active connections", "options": ""},
     {"fieldname": "connection_options", "fieldtype": "Small Text", "hidden": 1, "read_only": 1},
-    {"fieldname": "selected_connections", "fieldtype": "Small Text", "hidden": 1}
+    {"fieldname": "selected_connections", "fieldtype": "Small Text", "hidden": 1},
+    {"fieldname": "tables_section", "fieldtype": "Section Break", "label": "Table settings"},
+    {"fieldname": "tables_ui", "fieldtype": "HTML", "label": "Table configs", "options": ""}
   ],
   "permissions": [
     {"role": "System Manager", "read": 1, "write": 1, "create": 0, "delete": 0}
