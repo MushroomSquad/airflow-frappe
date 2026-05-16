@@ -21,6 +21,7 @@ def _mock_session(fetchone_return=None, fetchall_return=None):
 def test_get_variable_returns_value():
     row = MagicMock()
     row.val = '{"key": "value"}'
+    row.is_encrypted = False
     cm, _ = _mock_session(fetchone_return=row)
     with patch("frappe_airflow.airflow_db.variable_manager.get_session", return_value=cm):
         from frappe_airflow.airflow_db.variable_manager import get_variable
@@ -34,6 +35,22 @@ def test_get_variable_returns_none_when_missing():
         from frappe_airflow.airflow_db.variable_manager import get_variable
 
         assert get_variable("MISSING") is None
+
+
+def test_get_variable_decrypts_when_encrypted(monkeypatch):
+    from cryptography.fernet import Fernet
+
+    key = Fernet.generate_key().decode()
+    monkeypatch.setenv("AIRFLOW_FERNET_KEY", key)
+    token = Fernet(key).encrypt(b'{"ok": true}').decode()
+    row = MagicMock()
+    row.val = token
+    row.is_encrypted = True
+    cm, _ = _mock_session(fetchone_return=row)
+    with patch("frappe_airflow.airflow_db.variable_manager.get_session", return_value=cm):
+        from frappe_airflow.airflow_db.variable_manager import get_variable
+
+        assert get_variable("ENC_VAR") == '{"ok": true}'
 
 
 def test_set_variable_inserts_when_new():

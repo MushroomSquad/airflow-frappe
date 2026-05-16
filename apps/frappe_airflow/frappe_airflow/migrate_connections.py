@@ -8,6 +8,7 @@ import json
 import os
 
 DRY_RUN = os.environ.get("DRY_RUN", "").lower() in ("1", "true", "yes")
+REBUILD_ONLY = os.environ.get("REBUILD_ONLY", "").lower() in ("1", "true", "yes")
 
 
 def _platform_conn_field(platform: str) -> str:
@@ -20,8 +21,81 @@ def _platform_conn_field(platform: str) -> str:
     }.get(platform, "")
 
 
+def _parse_client_registry(raw: str) -> dict:
+    text_val = raw.strip()
+    if not text_val:
+        raise ValueError("CLIENT_REGISTRY is empty")
+    try:
+        data = json.loads(text_val)
+    except json.JSONDecodeError as exc:
+        preview = text_val[:120].replace("\n", " ")
+        raise ValueError(
+            f"CLIENT_REGISTRY is not valid JSON (len={len(text_val)}, preview={preview!r})"
+        ) from exc
+    if not isinstance(data, dict):
+        raise ValueError(f"CLIENT_REGISTRY must be a JSON object, got {type(data).__name__}")
+    if "CLIENT_REGISTRY" in data and len(data) == 1:
+        inner = data["CLIENT_REGISTRY"]
+        if isinstance(inner, dict):
+            return inner
+    return data
+
+
+def diagnose_client_registry():
+    """Print how CLIENT_REGISTRY is stored in Airflow metadata DB (for troubleshooting)."""
+    from sqlalchemy import text
+
+    from frappe_airflow.airflow_db.connection import get_session
+    from frappe_airflow.airflow_db.fernet import is_encrypted
+    from frappe_airflow.airflow_db.variable_manager import get_variable
+    import os
+
+    print(f"AIRFLOW_DB_URL={os.environ.get('AIRFLOW_DB_URL', '')}")
+    print(f"AIRFLOW_FERNET_KEY set={bool(os.environ.get('AIRFLOW_FERNET_KEY'))}")
+    with get_session() as s:
+        row = s.execute(
+            text(
+                "SELECT key, length(val::text) AS val_len, is_encrypted, "
+                "left(val::text, 40) AS val_prefix FROM variable WHERE key = 'CLIENT_REGISTRY'"
+            ),
+        ).fetchone()
+    if not row:
+        print("No CLIENT_REGISTRY row in variable table")
+        return
+    print(
+        f"DB row: len={row.val_len} is_encrypted={row.is_encrypted} prefix={row.val_prefix!r} "
+        f"looks_fernet={is_encrypted(row.val_prefix or '')}"
+    )
+    try:
+        decoded = get_variable("CLIENT_REGISTRY")
+    except Exception as exc:
+        print(f"get_variable failed: {exc}")
+        return
+    if not decoded:
+        print("get_variable returned empty")
+        return
+    print(f"get_variable: len={len(decoded)} starts_with={decoded[:60]!r}...")
+
+
+def rebuild_registries():
+    """Rebuild CONNECTION_REGISTRY and DAG_REGISTRY from current Frappe/Airflow state."""
+    import frappe
+
+    from frappe_airflow.airflow_db.connection_registry_sync import rebuild_connection_registry
+    from frappe_airflow.airflow_db.dag_registry_sync import rebuild_dag_registry
+
+    if DRY_RUN:
+        print("DRY_RUN: would rebuild CONNECTION_REGISTRY and DAG_REGISTRY")
+        return
+    rebuild_connection_registry()
+    rebuild_dag_registry()
+    frappe.db.commit()
+    print("Rebuilt CONNECTION_REGISTRY and DAG_REGISTRY")
+
+
 def run():
     import frappe
+    from cryptography.fernet import InvalidToken
 
     from frappe_airflow.airflow_db.connection_registry_sync import rebuild_connection_registry
     from frappe_airflow.airflow_db.dag_connection_sync import set_selected_connections
@@ -30,12 +104,39 @@ def run():
     from frappe_airflow.airflow_db.dag_registry_sync import rebuild_dag_registry
     from frappe_airflow.airflow_db.variable_manager import get_variable
 
-    raw = get_variable("CLIENT_REGISTRY")
-    if not raw:
-        print("CLIENT_REGISTRY is empty or missing — nothing to migrate")
+    if REBUILD_ONLY:
+        rebuild_registries()
         return
 
-    registry = json.loads(raw)
+    try:
+        raw = get_variable("CLIENT_REGISTRY")
+    except InvalidToken:
+        print(
+            "CLIENT_REGISTRY is encrypted but AIRFLOW_FERNET_KEY does not match Airflow. "
+            "Fix AIRFLOW_FERNET_KEY in .env / compose, or re-import CLIENT_REGISTRY as plain JSON."
+        )
+        return
+
+    if not raw or not raw.strip():
+        conn_count = frappe.db.count("AM Airflow Connection")
+        if conn_count:
+            print(
+                f"CLIENT_REGISTRY missing; {conn_count} AM Airflow Connection row(s) exist. "
+                "Run: REBUILD_ONLY=1 bench --site SITE execute frappe_airflow.migrate_connections.run"
+            )
+        else:
+            print(
+                "CLIENT_REGISTRY is empty or missing and no AM Airflow Connection rows. "
+                "Import CLIENT_REGISTRY from scripts/export_registry_to_variables.py, "
+                "or create connections in Frappe UI, then REBUILD_ONLY=1."
+            )
+        return
+
+    try:
+        registry = _parse_client_registry(raw)
+    except ValueError as exc:
+        print(str(exc))
+        return
     created = 0
     dag_updates: dict[str, set[str]] = {}
 
