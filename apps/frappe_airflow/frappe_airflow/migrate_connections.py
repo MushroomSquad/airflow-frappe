@@ -193,6 +193,21 @@ def run():
     print(f"Done. Connections: {created}, DAGs: {len(dag_updates)}")
 
 
+def _resolve_target_db_conn(target_db: str) -> str:
+    """Return target_db if a postgres connection row exists in Airflow (for warnings only)."""
+    from frappe_airflow.airflow_db.connection_manager import get_connection
+
+    if not (target_db or "").strip():
+        return ""
+    row = get_connection(target_db.strip())
+    if not row:
+        return ""
+    ctype = (row.get("conn_type") or "").lower()
+    if ctype in ("postgres", "postgresql"):
+        return target_db.strip()
+    return ""
+
+
 def _upsert_frappe_connection(
     conn_id: str,
     platform: str,
@@ -200,20 +215,36 @@ def _upsert_frappe_connection(
     display_name: str,
     target_db: str,
 ) -> None:
-    import frappe
-
+    """Write connection metadata into Airflow ``connection.extra`` (bypasses Frappe Link checks)."""
+    from frappe_airflow.airflow_db.connection_manager import get_connection, upsert_connection
+    from frappe_airflow.airflow_db.connection_meta import pack_extra
     from frappe_airflow.airflow_db.dag_platform import default_conn_type_for_platform
 
     conn_type = default_conn_type_for_platform(platform)
-    if frappe.db.exists("AM Airflow Connection", conn_id):
-        doc = frappe.get_doc("AM Airflow Connection", conn_id)
-    else:
-        doc = frappe.new_doc("AM Airflow Connection")
-        doc.conn_id = conn_id
+    target_db = (target_db or "").strip()
+    if target_db and not _resolve_target_db_conn(target_db):
+        print(
+            f"WARN: postgres connection {target_db!r} not in Airflow table — "
+            f"still storing in extra for {conn_id}"
+        )
 
-    doc.platform = platform
-    doc.slug = slug
-    doc.display_name = display_name
-    doc.conn_type = conn_type
-    doc.target_db_connection = target_db
-    doc.save(ignore_permissions=True)
+    existing = get_connection(conn_id)
+    extra = pack_extra(
+        platform=platform,
+        slug=slug,
+        display_name=display_name,
+        target_db_connection=target_db,
+        existing_extra=(existing or {}).get("extra"),
+    )
+    upsert_connection(
+        {
+            "conn_id": conn_id,
+            "conn_type": conn_type,
+            "description": (existing or {}).get("description", ""),
+            "host": (existing or {}).get("host", ""),
+            "schema": (existing or {}).get("schema", ""),
+            "login": (existing or {}).get("login", ""),
+            "port": (existing or {}).get("port"),
+            "extra": extra,
+        }
+    )
