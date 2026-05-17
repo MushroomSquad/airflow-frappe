@@ -35,6 +35,14 @@ def _marketplace_connection_filters(
     return filters, params
 
 
+def _normalize_extra(extra: str | None) -> str | None:
+    """Airflow 3 UI/API rejects empty-string ``extra``; use NULL instead."""
+    if extra is None:
+        return None
+    text = str(extra).strip()
+    return text or None
+
+
 def _row_to_dict(row, include_password: bool = False) -> dict[str, Any]:
     d = {
         "conn_id": row.conn_id,
@@ -137,7 +145,7 @@ def upsert_connection(data: dict) -> None:
             encrypted_password = ""
             is_enc = False
 
-        extra = data.get("extra", "")
+        extra = _normalize_extra(data.get("extra"))
         if existing:
             s.execute(
                 text(
