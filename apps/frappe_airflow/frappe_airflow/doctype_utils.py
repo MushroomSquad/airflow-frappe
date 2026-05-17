@@ -18,7 +18,9 @@ def apply_virtual_row(doc, values: dict) -> None:
     if not hasattr(doc, "_action"):
         doc._action = "save"
     now = now_datetime()
-    stable_modified = values.get("last_parsed_time") or values.get("modified")
+    stable_modified = values.get("frappe_modified") or values.get("last_parsed_time") or values.get("modified")
+    stable_creation = values.get("frappe_creation") or values.get("creation")
+    stable_owner = values.get("frappe_owner") or values.get("owner")
     if stable_modified:
         try:
             modified = get_datetime(stable_modified)
@@ -26,6 +28,13 @@ def apply_virtual_row(doc, values: dict) -> None:
             modified = now
     else:
         modified = now
+    if stable_creation:
+        try:
+            creation = get_datetime(stable_creation)
+        except Exception:
+            creation = modified
+    else:
+        creation = modified
     try:
         user = frappe.session.user
     except Exception:
@@ -34,9 +43,9 @@ def apply_virtual_row(doc, values: dict) -> None:
     doc.__dict__.update(
         {
             "name": name,
-            "owner": user,
+            "owner": stable_owner or user,
             "modified_by": user,
-            "creation": modified,
+            "creation": creation,
             "modified": modified,
             "docstatus": 0,
             "idx": 0,

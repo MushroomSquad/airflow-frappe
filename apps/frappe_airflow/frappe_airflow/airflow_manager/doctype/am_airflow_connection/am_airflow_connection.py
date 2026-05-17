@@ -69,10 +69,23 @@ def _existing_extra(conn_id: str) -> str | None:
     return row.get("extra")
 
 
+def _frappe_meta_kwargs(doc_data: dict, existing_extra: str | None) -> dict[str, str]:
+    meta = unpack_extra(existing_extra)
+    kwargs: dict[str, str] = {}
+    creation = doc_data.get("creation")
+    owner = doc_data.get("owner")
+    if creation and not meta.get("frappe_creation"):
+        kwargs["frappe_creation"] = str(creation)
+    if owner and not meta.get("frappe_owner"):
+        kwargs["frappe_owner"] = str(owner)
+    return kwargs
+
+
 def _to_airflow_payload(doc_data: dict, existing_extra: str | None = None) -> dict:
     conn_type = _resolve_conn_type(doc_data)
     mapping = _PLATFORM_FIELDS.get(conn_type, {})
     conn_id = _resolve_conn_id(doc_data)
+    merged_extra = existing_extra or _existing_extra(conn_id)
     payload = {
         "conn_id": conn_id,
         "conn_type": conn_type,
@@ -82,7 +95,8 @@ def _to_airflow_payload(doc_data: dict, existing_extra: str | None = None) -> di
             slug=doc_data.get("slug", ""),
             display_name=doc_data.get("display_name", ""),
             target_db_connection=doc_data.get("target_db_connection", ""),
-            existing_extra=existing_extra or _existing_extra(conn_id),
+            existing_extra=merged_extra,
+            **_frappe_meta_kwargs(doc_data, merged_extra),
         ),
     }
     for form_field, airflow_field in mapping.items():
@@ -104,6 +118,8 @@ def _from_airflow_row(row: dict) -> dict:
         "slug": meta.get("slug") or profile.get("slug", ""),
         "display_name": meta.get("display_name", ""),
         "target_db_connection": meta.get("target_db_connection", ""),
+        "frappe_creation": meta.get("frappe_creation", ""),
+        "frappe_owner": meta.get("frappe_owner", ""),
     }
     for form_field, airflow_field in mapping.items():
         if airflow_field == "password":

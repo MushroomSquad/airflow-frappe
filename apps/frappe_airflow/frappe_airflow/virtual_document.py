@@ -24,7 +24,14 @@ class VirtualAirflowDocument(Document):
         self._ensure_runtime_state()
         if not self.is_new() and self._doc_before_save is None:
             self.load_doc_before_save()
+        if self._doc_before_save:
+            self.creation = self._doc_before_save.creation
+            self.owner = self._doc_before_save.owner
         return super().save(*args, **kwargs)
+
+    def validate_set_only_once(self):
+        """Virtual rows are not in ``tab*``; creation/owner are not MariaDB-backed."""
+        return
 
     def check_if_latest(self) -> None:
         """Load previous row for Frappe validations without MariaDB modified lock.

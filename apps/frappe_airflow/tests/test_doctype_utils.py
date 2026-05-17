@@ -12,6 +12,20 @@ def test_apply_virtual_row_sets_modified():
     assert doc.name == "wb_orders_etl_dag"
 
 
+def test_apply_virtual_row_uses_stable_frappe_creation():
+    doc = _FakeDoc()
+    apply_virtual_row(
+        doc,
+        {
+            "conn_id": "wb_api_token_testik",
+            "frappe_creation": "2026-05-17 10:39:27.539048",
+            "frappe_owner": "Administrator",
+        },
+    )
+    assert str(doc.creation).startswith("2026-05-17 10:39:27")
+    assert doc.owner == "Administrator"
+
+
 def test_is_link_search_from_reference_doctype():
     assert is_link_search({"reference_doctype": "AM Airflow DAG"}) is True
 
