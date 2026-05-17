@@ -1,13 +1,13 @@
 import json
 from unittest.mock import patch
 
-from frappe_airflow.airflow_db.config_sync import build_client_config, rebuild_client_config
+from frappe_airflow.airflow_db.config_sync import build_dag_table_config, rebuild_dag_table_config
 
 CONFIGS = [
     {
         "dag_id": "wb_orders_etl_dag",
         "scope": "_default",
-        "cabinet_slug": "",
+        "connection": "",
         "table_name": "wb_orders",
         "enabled": True,
         "load_strategy": "append",
@@ -19,8 +19,8 @@ CONFIGS = [
     },
     {
         "dag_id": "wb_orders_etl_dag",
-        "scope": "cabinet",
-        "cabinet_slug": "pharm_legend",
+        "scope": "connection",
+        "connection": "wb_api_token_pharm_legend",
         "table_name": "wb_orders",
         "enabled": True,
         "load_strategy": "append",
@@ -34,32 +34,30 @@ CONFIGS = [
 
 
 def test_build_config_structure():
-    result = build_client_config(CONFIGS)
-    assert "wb_orders_etl_dag" in result
-    dag = result["wb_orders_etl_dag"]
-    assert "_default" in dag
-    assert "pharm_legend" in dag
+    result = build_dag_table_config(CONFIGS)
+    assert "_default" in result
+    assert "wb_api_token_pharm_legend" in result
 
 
 def test_build_config_default_table():
-    result = build_client_config(CONFIGS)
-    default_cfg = result["wb_orders_etl_dag"]["_default"]["wb_orders"]
+    result = build_dag_table_config(CONFIGS)
+    default_cfg = result["_default"]["wb_orders"]
     assert default_cfg["incremental_days"] == 15
     assert default_cfg["exclude_fields"] == ["internal_field"]
     assert default_cfg["rename_fields"] == {"old": "new"}
 
 
-def test_build_config_cabinet_override():
-    result = build_client_config(CONFIGS)
-    cab_cfg = result["wb_orders_etl_dag"]["pharm_legend"]["wb_orders"]
-    assert cab_cfg["incremental_days"] == 30
+def test_build_config_connection_override():
+    result = build_dag_table_config(CONFIGS)
+    conn_cfg = result["wb_api_token_pharm_legend"]["wb_orders"]
+    assert conn_cfg["incremental_days"] == 30
 
 
 def test_rebuild_calls_set_variable_with_correct_key():
     with patch("frappe_airflow.airflow_db.config_sync.set_variable") as mock_set:
-        rebuild_client_config("efendem", CONFIGS)
+        rebuild_dag_table_config("wb_orders_etl_dag", CONFIGS)
     mock_set.assert_called_once()
     key = mock_set.call_args[0][0]
-    assert key == "client_config_efendem"
+    assert key == "dag_table_config_wb_orders_etl_dag"
     val = json.loads(mock_set.call_args[0][1])
-    assert "wb_orders_etl_dag" in val
+    assert "_default" in val

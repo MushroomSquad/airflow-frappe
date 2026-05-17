@@ -1,14 +1,38 @@
 from __future__ import annotations
 
+import frappe
+from frappe.utils import now_datetime
+
 
 def apply_virtual_row(doc, values: dict) -> None:
     """Populate a virtual DocType instance during load_from_db.
 
     `Document.update()` is too early here for Frappe virtual documents and may
     access internal table metadata before it is initialized.
+
+    Frappe save/versioning expects standard metadata fields (``modified``, etc.).
     """
     doc._table_fieldnames = getattr(doc, "_table_fieldnames", {})
+    now = now_datetime()
+    try:
+        user = frappe.session.user
+    except Exception:
+        user = "Administrator"
+    name = values.get("name") or values.get("dag_id") or values.get("conn_id")
+    doc.__dict__.update(
+        {
+            "name": name,
+            "owner": user,
+            "modified_by": user,
+            "creation": now,
+            "modified": now,
+            "docstatus": 0,
+            "idx": 0,
+        }
+    )
     doc.__dict__.update(values)
+    if name and not doc.__dict__.get("name"):
+        doc.__dict__["name"] = name
 
 
 def is_link_search(args: dict | None) -> bool:

@@ -64,6 +64,14 @@ def get_conn_type_options(platform: str) -> list[str]:
 
 
 @frappe.whitelist()
+def sync_all_to_airflow() -> dict:
+    """Rebuild CONNECTION_REGISTRY, DAG_REGISTRY, and all dag_table_config_* in one call."""
+    from frappe_airflow.sync_all import run
+
+    return run()
+
+
+@frappe.whitelist()
 def get_dag_table_configs(dag_id: str) -> list[dict]:
     """List AM Table Config rows for a DAG (for embedded DAG form UI)."""
     if not dag_id:

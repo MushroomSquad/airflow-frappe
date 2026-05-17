@@ -1,4 +1,15 @@
-from frappe_airflow.doctype_utils import as_link_search_rows, extract_search_text, is_link_search
+from frappe_airflow.doctype_utils import apply_virtual_row, as_link_search_rows, extract_search_text, is_link_search
+
+
+class _FakeDoc:
+    doctype = "AM Airflow DAG"
+
+
+def test_apply_virtual_row_sets_modified():
+    doc = _FakeDoc()
+    apply_virtual_row(doc, {"dag_id": "wb_orders_etl_dag", "is_paused": 0})
+    assert doc.modified
+    assert doc.name == "wb_orders_etl_dag"
 
 
 def test_is_link_search_from_reference_doctype():

@@ -154,7 +154,8 @@ class AMAirflowConnection(Document):
         payload = _to_airflow_payload(doc_data)
         upsert_connection(payload)
         sync_companion_connections(doc_data)
-        assign_connection_to_matching_dags(payload["conn_id"], payload["conn_type"])
+        if frappe.utils.cint(doc_data.get("assign_to_matching_dags", 1)):
+            assign_connection_to_matching_dags(payload["conn_id"], payload["conn_type"])
         _sync_connection_registry(payload["conn_id"])
 
     def db_update(self, *args, **kwargs):

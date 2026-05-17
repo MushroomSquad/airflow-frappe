@@ -25,6 +25,15 @@ def _ensure_dag_config(dag_id: str) -> None:
     frappe.db.commit()
 
 
+def _sync_dag_table_config_variable(dag_id: str) -> None:
+    try:
+        from frappe_airflow.airflow_db.config_sync import reload_dag_table_config_from_db
+
+        reload_dag_table_config_from_db(dag_id)
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "AM Airflow DAG table config sync failed")
+
+
 def _parse_selected(value) -> list[str]:
     if not value:
         return []
@@ -71,6 +80,7 @@ class AMAirflowDAG(Document):
         _ensure_dag_config(self.dag_id)
         conn_ids = _parse_selected(self.selected_connections)
         set_selected_connections(self.dag_id, conn_ids)
+        _sync_dag_table_config_variable(self.dag_id)
 
     def delete(self):
         frappe.throw("AM Airflow DAG cannot be deleted from here")
