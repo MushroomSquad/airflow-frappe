@@ -13,6 +13,10 @@ def apply_virtual_row(doc, values: dict) -> None:
     Frappe save/versioning expects standard metadata fields (``modified``, etc.).
     """
     doc._table_fieldnames = getattr(doc, "_table_fieldnames", {})
+    if not getattr(doc, "flags", None):
+        doc.flags = frappe._dict()
+    if not hasattr(doc, "_action"):
+        doc._action = "save"
     now = now_datetime()
     stable_modified = values.get("last_parsed_time") or values.get("modified")
     if stable_modified:
