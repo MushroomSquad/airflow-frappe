@@ -13,6 +13,7 @@ from sqlalchemy import text
 from frappe_airflow.airflow_db.connection import get_session
 from frappe_airflow.airflow_db.dag_platform import COMPANION_CONN_PREFIXES
 from frappe_airflow.airflow_db.fernet import decrypt, encrypt
+from frappe_airflow.password_fields import normalize_submitted_password
 
 
 def _marketplace_connection_filters(
@@ -127,7 +128,7 @@ def get_connection(conn_id: str) -> dict | None:
 def upsert_connection(data: dict) -> None:
     """Insert or update a connection. Password blank -> preserve existing encrypted value."""
     conn_id = data["conn_id"]
-    new_password = data.get("password") or ""
+    new_password = normalize_submitted_password(data.get("password"))
 
     with get_session() as s:
         existing = s.execute(

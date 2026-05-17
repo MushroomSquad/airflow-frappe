@@ -26,6 +26,7 @@ from frappe_airflow.doctype_utils import (
     extract_search_text,
     is_link_search,
 )
+from frappe_airflow.password_fields import read_password_from_doc
 from frappe_airflow.virtual_document import VirtualAirflowDocument
 
 # form_field -> airflow connection column
@@ -81,7 +82,8 @@ def _frappe_meta_kwargs(doc_data: dict, existing_extra: str | None) -> dict[str,
     return kwargs
 
 
-def _to_airflow_payload(doc_data: dict, existing_extra: str | None = None) -> dict:
+def _to_airflow_payload(doc, existing_extra: str | None = None) -> dict:
+    doc_data = doc.as_dict() if hasattr(doc, "as_dict") else dict(doc)
     conn_type = _resolve_conn_type(doc_data)
     mapping = _PLATFORM_FIELDS.get(conn_type, {})
     conn_id = _resolve_conn_id(doc_data)
@@ -100,7 +102,10 @@ def _to_airflow_payload(doc_data: dict, existing_extra: str | None = None) -> di
         ),
     }
     for form_field, airflow_field in mapping.items():
-        val = doc_data.get(form_field) or ""
+        if airflow_field == "password":
+            val = read_password_from_doc(doc, form_field)
+        else:
+            val = doc_data.get(form_field) or ""
         payload[airflow_field] = val
     return payload
 
@@ -166,7 +171,7 @@ class AMAirflowConnection(VirtualAirflowDocument):
 
     def db_insert(self, *args, **kwargs):
         doc_data = self.as_dict()
-        payload = _to_airflow_payload(doc_data)
+        payload = _to_airflow_payload(self)
         upsert_connection(payload)
         sync_companion_connections(doc_data)
         if frappe.utils.cint(doc_data.get("assign_to_matching_dags", 1)):
@@ -176,7 +181,7 @@ class AMAirflowConnection(VirtualAirflowDocument):
     def db_update(self, *args, **kwargs):
         doc_data = self.as_dict()
         existing = _existing_extra(self.conn_id or self.name)
-        payload = _to_airflow_payload(doc_data, existing_extra=existing)
+        payload = _to_airflow_payload(self, existing_extra=existing)
         upsert_connection(payload)
         sync_companion_connections(doc_data)
         _sync_connection_registry(payload["conn_id"])
