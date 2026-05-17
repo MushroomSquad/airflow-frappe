@@ -222,7 +222,7 @@ class AMAirflowConnection(VirtualAirflowDocument):
     @staticmethod
     def get_count(args):
         try:
-            return count_connections()
+            return count_connections(search=extract_search_text(args))
         except Exception:
             return 0
 

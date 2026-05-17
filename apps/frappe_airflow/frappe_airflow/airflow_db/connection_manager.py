@@ -11,7 +11,28 @@ from typing import Any
 from sqlalchemy import text
 
 from frappe_airflow.airflow_db.connection import get_session
+from frappe_airflow.airflow_db.dag_platform import COMPANION_CONN_PREFIXES
 from frappe_airflow.airflow_db.fernet import decrypt, encrypt
+
+
+def _marketplace_connection_filters(
+    conn_type: str | None = None,
+    search: str | None = None,
+) -> tuple[list[str], dict[str, Any]]:
+    """SQL filters aligned with AM Airflow Connection list view."""
+    filters: list[str] = []
+    params: dict[str, Any] = {}
+    if conn_type:
+        filters.append("conn_type = :conn_type")
+        params["conn_type"] = conn_type
+    else:
+        filters.append("conn_type != 'postgres'")
+        for prefix in COMPANION_CONN_PREFIXES:
+            filters.append(f"conn_id NOT LIKE '{prefix}%'")
+    if search:
+        filters.append("conn_id ILIKE :search")
+        params["search"] = f"%{search}%"
+    return filters, params
 
 
 def _row_to_dict(row, include_password: bool = False) -> dict[str, Any]:
@@ -46,16 +67,8 @@ def list_connections(
 ) -> list[dict]:
     """Return connections without passwords."""
     with get_session() as s:
-        filters = []
-        params: dict[str, Any] = {"limit": limit, "offset": offset}
-        if conn_type:
-            filters.append("conn_type = :conn_type")
-            params["conn_type"] = conn_type
-        elif conn_type is None:
-            filters.append("conn_type != 'postgres'")
-        if search:
-            filters.append("conn_id ILIKE :search")
-            params["search"] = f"%{search}%"
+        filters, filter_params = _marketplace_connection_filters(conn_type, search)
+        params: dict[str, Any] = {"limit": limit, "offset": offset, **filter_params}
         where = ("WHERE " + " AND ".join(filters)) if filters else ""
         sql = text(
             "SELECT conn_id, conn_type, description, host, schema, login, port, extra, "
@@ -84,14 +97,7 @@ def list_marketplace_connections(limit: int = 500, offset: int = 0) -> list[dict
 
 def count_connections(conn_type: str | None = None, search: str | None = None) -> int:
     with get_session() as s:
-        filters = []
-        params: dict[str, Any] = {}
-        if conn_type:
-            filters.append("conn_type = :conn_type")
-            params["conn_type"] = conn_type
-        if search:
-            filters.append("conn_id ILIKE :search")
-            params["search"] = f"%{search}%"
+        filters, params = _marketplace_connection_filters(conn_type, search)
         where = ("WHERE " + " AND ".join(filters)) if filters else ""
         sql = text(f"SELECT COUNT(*) FROM connection {where}")
         return s.execute(sql, params).scalar() or 0
