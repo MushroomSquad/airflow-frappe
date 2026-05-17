@@ -1,7 +1,6 @@
 import json
 
 import frappe
-from frappe.model.document import Document
 
 from frappe_airflow.airflow_db.dag_connection_options import build_dag_connection_options
 from frappe_airflow.airflow_db.dag_connection_sync import (
@@ -10,6 +9,7 @@ from frappe_airflow.airflow_db.dag_connection_sync import (
 )
 from frappe_airflow.airflow_db.dag_reader import count_dags, get_dag, list_dags, set_dag_paused
 from frappe_airflow.doctype_utils import apply_virtual_row
+from frappe_airflow.virtual_document import VirtualAirflowDocument
 
 
 def _ensure_dag_config(dag_id: str) -> None:
@@ -54,7 +54,7 @@ def _parse_selected(value) -> list[str]:
     return []
 
 
-class AMAirflowDAG(Document):
+class AMAirflowDAG(VirtualAirflowDocument):
     def load_from_db(self):
         row = get_dag(self.name)
         if not row:

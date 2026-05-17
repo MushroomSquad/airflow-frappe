@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import frappe
-from frappe.utils import now_datetime
+from frappe.utils import get_datetime, now_datetime
 
 
 def apply_virtual_row(doc, values: dict) -> None:
@@ -14,6 +14,14 @@ def apply_virtual_row(doc, values: dict) -> None:
     """
     doc._table_fieldnames = getattr(doc, "_table_fieldnames", {})
     now = now_datetime()
+    stable_modified = values.get("last_parsed_time") or values.get("modified")
+    if stable_modified:
+        try:
+            modified = get_datetime(stable_modified)
+        except Exception:
+            modified = now
+    else:
+        modified = now
     try:
         user = frappe.session.user
     except Exception:
@@ -24,8 +32,8 @@ def apply_virtual_row(doc, values: dict) -> None:
             "name": name,
             "owner": user,
             "modified_by": user,
-            "creation": now,
-            "modified": now,
+            "creation": modified,
+            "modified": modified,
             "docstatus": 0,
             "idx": 0,
         }

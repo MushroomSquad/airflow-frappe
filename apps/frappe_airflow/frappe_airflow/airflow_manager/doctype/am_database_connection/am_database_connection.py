@@ -1,5 +1,4 @@
 import frappe
-from frappe.model.document import Document
 
 from frappe_airflow.airflow_db.connection_manager import (
     count_connections,
@@ -14,9 +13,10 @@ from frappe_airflow.doctype_utils import (
     extract_search_text,
     is_link_search,
 )
+from frappe_airflow.virtual_document import VirtualAirflowDocument
 
 
-class AMDatabaseConnection(Document):
+class AMDatabaseConnection(VirtualAirflowDocument):
     def load_from_db(self):
         row = get_connection(self.name)
         if not row:

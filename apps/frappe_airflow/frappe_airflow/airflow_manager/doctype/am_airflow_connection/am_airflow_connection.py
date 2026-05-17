@@ -1,8 +1,6 @@
 """Virtual DocType - reads and writes directly to Airflow's connection table."""
 import frappe
 from frappe import _
-from frappe.model.document import Document
-
 from frappe_airflow.airflow_db.connection_manager import (
     count_connections,
     delete_connection,
@@ -28,6 +26,7 @@ from frappe_airflow.doctype_utils import (
     extract_search_text,
     is_link_search,
 )
+from frappe_airflow.virtual_document import VirtualAirflowDocument
 
 # form_field -> airflow connection column
 _PLATFORM_FIELDS: dict[str, dict[str, str]] = {
@@ -126,7 +125,7 @@ def _remove_connection_registry(conn_id: str) -> None:
     remove_connection_registry_entry(conn_id)
 
 
-class AMAirflowConnection(Document):
+class AMAirflowConnection(VirtualAirflowDocument):
     def validate(self):
         if not (self.display_name or "").strip():
             frappe.throw(_("Display Name is required"))
