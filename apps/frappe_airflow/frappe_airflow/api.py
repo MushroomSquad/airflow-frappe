@@ -72,17 +72,30 @@ def sync_all_to_airflow() -> dict:
 
 
 @frappe.whitelist()
-def import_airparse_xlsx(file_name: str) -> dict:
+def import_airparse_xlsx(file_url: str) -> dict:
     """Import connections and variables from an airparse .xlsx export.
 
-    ``file_name`` is the Frappe File docname (e.g. "export.xlsx" or the full
-    docname returned after uploading via Frappe's file manager).  The file must
-    already be uploaded to the Frappe site (private or public files).
+    ``file_url`` is the URL returned by Frappe's upload_file endpoint,
+    e.g. ``/private/files/export.xlsx`` or ``/files/export.xlsx``.
     """
+    import os
     from frappe_airflow.importer.airparse_importer import import_from_xlsx
 
-    file_doc = frappe.get_doc("File", {"file_name": file_name})
-    file_path = file_doc.get_full_path()
+    file_url = (file_url or "").strip()
+    if not file_url:
+        frappe.throw("file_url is required")
+
+    basename = os.path.basename(file_url)
+    site_path = frappe.get_site_path()
+
+    if "/private/" in file_url:
+        file_path = os.path.join(site_path, "private", "files", basename)
+    else:
+        file_path = os.path.join(site_path, "public", "files", basename)
+
+    if not os.path.isfile(file_path):
+        frappe.throw(f"File not found on server: {file_path}")
+
     return import_from_xlsx(file_path)
 
 
