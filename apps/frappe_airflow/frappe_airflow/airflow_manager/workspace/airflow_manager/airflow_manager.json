@@ -12,7 +12,8 @@
     {"color": "Orange", "doc_view": "List", "label": "Connections", "link_to": "AM Airflow Connection", "type": "DocType"},
     {"color": "Orange", "doc_view": "List", "label": "Databases", "link_to": "AM Database Connection", "type": "DocType"},
     {"color": "Gray", "doc_view": "List", "label": "DAGs", "link_to": "AM Airflow DAG", "type": "DocType"},
-    {"color": "Green", "doc_view": "List", "label": "Table Configs", "link_to": "AM Table Config", "type": "DocType"}
+    {"color": "Green", "doc_view": "List", "label": "Table Configs", "link_to": "AM Table Config", "type": "DocType"},
+    {"color": "Blue", "label": "Import Airparse", "link_to": "am-import", "type": "Page"}
   ],
-  "content": "[{\"id\":\"s1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Connections\",\"col\":3}},{\"id\":\"s2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Databases\",\"col\":3}},{\"id\":\"s3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"DAGs\",\"col\":3}},{\"id\":\"s4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Table Configs\",\"col\":3}}]"
+  "content": "[{\"id\":\"s1\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Connections\",\"col\":3}},{\"id\":\"s2\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Databases\",\"col\":3}},{\"id\":\"s3\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"DAGs\",\"col\":3}},{\"id\":\"s4\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Table Configs\",\"col\":3}},{\"id\":\"s5\",\"type\":\"shortcut\",\"data\":{\"shortcut_name\":\"Import Airparse\",\"col\":3}}]"
 }

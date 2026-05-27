@@ -72,6 +72,21 @@ def sync_all_to_airflow() -> dict:
 
 
 @frappe.whitelist()
+def import_airparse_xlsx(file_name: str) -> dict:
+    """Import connections and variables from an airparse .xlsx export.
+
+    ``file_name`` is the Frappe File docname (e.g. "export.xlsx" or the full
+    docname returned after uploading via Frappe's file manager).  The file must
+    already be uploaded to the Frappe site (private or public files).
+    """
+    from frappe_airflow.importer.airparse_importer import import_from_xlsx
+
+    file_doc = frappe.get_doc("File", {"file_name": file_name})
+    file_path = file_doc.get_full_path()
+    return import_from_xlsx(file_path)
+
+
+@frappe.whitelist()
 def get_dag_table_configs(dag_id: str) -> list[dict]:
     """List AM Table Config rows for a DAG (for embedded DAG form UI)."""
     if not dag_id:
