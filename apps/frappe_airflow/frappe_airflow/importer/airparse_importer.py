@@ -81,6 +81,19 @@ def _parse_variable_as_dict(raw: str) -> dict[str, str] | None:
     return _parse_py_str_dict(raw)
 
 
+def _safe_port(value: Any, default: int | None = None) -> int | None:
+    """Convert port value to int, return default on None / 'None' / blank."""
+    if value is None:
+        return default
+    s = str(value).strip()
+    if not s or s.lower() == "none":
+        return default
+    try:
+        return int(s)
+    except ValueError:
+        return default
+
+
 def _resolve_target_db(slug: str, pg_map: dict[str, str]) -> str:
     """Match slug against CUSTOMER_PG_URI_MAP using longest-prefix rule.
 
@@ -169,7 +182,7 @@ def import_from_xlsx(file_path: str) -> dict[str, Any]:
                 "conn_id": cid,
                 "conn_type": "postgres",
                 "host": host or "",
-                "port": int(port) if port else 5432,
+                "port": _safe_port(port, 5432),
                 "schema": schema or "",
                 "login": login or "",
                 "password": password or "",
@@ -276,14 +289,13 @@ def import_from_xlsx(file_path: str) -> dict[str, Any]:
                 "conn_id": cid,
                 "conn_type": ctype or "other",
                 "host": host or "",
+                "port": _safe_port(port),
                 "schema": schema or "",
                 "login": login or "",
                 "password": password or "",
                 "extra": extra or "",
                 "description": "",
             }
-            if port:
-                payload["port"] = int(port)
             upsert_connection(payload)
             results["other_connections"] += 1
         except Exception as exc:
