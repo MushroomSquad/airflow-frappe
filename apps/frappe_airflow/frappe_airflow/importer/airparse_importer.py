@@ -212,7 +212,8 @@ def import_from_xlsx(file_path: str) -> dict[str, Any]:
                 except Exception:
                     pass
 
-            target_db = extra_meta.get("target_db_connection") or _resolve_target_db(slug, pg_map)
+            # pg_map (from CUSTOMER_PG_URI_MAP) takes priority over stale xlsx extra
+            target_db = _resolve_target_db(slug, pg_map) or extra_meta.get("target_db_connection") or ""
             display_name = extra_meta.get("display_name") or slug
 
             # For oz_seller: client_seller_id may be in login column OR in companion row
