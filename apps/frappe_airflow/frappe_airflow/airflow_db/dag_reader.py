@@ -33,8 +33,11 @@ def _active_condition(columns: set[str]) -> str | None:
     """Return SQL fragment that filters to only live DAGs, or None if not applicable.
 
     Airflow keeps removed DAGs in the ``dag`` table indefinitely.
-    - Airflow 2.x/3.x: ``is_active = true`` marks DAGs whose file exists.
+    - Airflow 3.x: ``is_stale = false`` (DAG file still exists / scheduler sees it).
+    - Airflow 2.x: ``is_active = true``.
     """
+    if "is_stale" in columns:
+        return "is_stale = false"
     if "is_active" in columns:
         return "is_active = true"
     return None
