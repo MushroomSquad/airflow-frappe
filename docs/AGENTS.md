@@ -82,6 +82,7 @@ Hotfix без rebuild: `docker cp` в `.../apps/frappe_airflow/` + migrate + bui
 | Сохранение привязок | `dag_connection_sync.py` |
 | Link field search | `doctype_utils.py` (`as_link_search_rows`) |
 | API | `api.py` |
+| Удаление коннекшенов | `airflow_db/connection_delete.py`, `public/js/am_airflow_connection_list.js` |
 | Деплой | `marketplace-new/docker/frappe-manager.Dockerfile`, `airflow-manager/docker/entrypoint.sh` |
 
 ---

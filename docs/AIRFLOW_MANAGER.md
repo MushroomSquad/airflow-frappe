@@ -223,6 +223,7 @@ Companion не показываются в списке и не предлага
 | `frappe_airflow.api.prepare_dag_config_form` | JSON `connection_options` для AM DAG Config |
 | `frappe_airflow.api.preview_conn_id` | Превью conn_id по platform/slug/type |
 | `frappe_airflow.api.get_conn_type_options` | Допустимые conn_type для platform |
+| `frappe_airflow.api.bulk_delete_connections` | Массовое удаление коннекшенов с каскадом |
 
 ---
 
@@ -231,6 +232,7 @@ Companion не показываются в списке и не предлага
 | Файл | Ответственность |
 |------|-----------------|
 | `airflow_db/connection_manager.py` | CRUD `connection`, Fernet, list без postgres для marketplace |
+| `airflow_db/connection_delete.py` | Каскадное удаление коннекшена (DAG config, table config, registry) |
 | `airflow_db/connection_meta.py` | `pack_extra` / `unpack_extra` (platform, slug, display_name, is_companion) |
 | `airflow_db/dag_platform.py` | Платформы, шаблоны id, legacy inference, `conn_matches_dag` |
 | `airflow_db/dag_connection_options.py` | `build_dag_connection_options(dag_id)` |
@@ -356,7 +358,25 @@ Frappe UI **пишет в `AM DAG Config`**, не в Variable. Пока DAG-ко
 
 ---
 
-## 10. История коммитов (ориентир)
+## 10. Удаление коннекшенов
+
+Удаление **AM Airflow Connection** (форма или list Actions → Delete) выполняет каскад:
+
+| Что очищается | Где |
+|---------------|-----|
+| Строка коннекшена + Ozon companions | Airflow PostgreSQL `connection` |
+| `CONNECTION_REGISTRY` | Airflow Variable |
+| `conn_id` в привязках DAG | `AM DAG Config.selected_connections` → `DAG_REGISTRY` |
+| Child rows | `AM DAG Connection` |
+| Per-connection table config | `AM Table Config` → `dag_table_config_{dag_id}` |
+
+Код: `airflow_db/connection_delete.py`, API массового удаления: `frappe_airflow.api.bulk_delete_connections`.
+
+List view переопределяет стандартный Frappe bulk delete (порог 10 записей + фоновая очередь без ответа UI) на синхронный вызов `bulk_delete_connections` — см. `public/js/am_airflow_connection_list.js`.
+
+---
+
+## 11. История коммитов (ориентир)
 
 | Коммит | Содержание |
 |--------|------------|
@@ -368,18 +388,20 @@ Frappe UI **пишет в `AM DAG Config`**, не в Variable. Пока DAG-ко
 
 ---
 
-## 11. Тесты
+## 12. Тесты
 
 ```bash
 cd apps/frappe_airflow
-PYTHONPATH=. python -m pytest tests/test_dag_platform.py -q
+PYTHONPATH=. python -m pytest tests/test_dag_platform.py tests/test_connection_delete.py -q
+# или без pytest:
+PYTHONPATH=. python3 tests/test_connection_delete.py
 ```
 
 Тесты inference не требуют PostgreSQL. Интеграционные тесты connection_manager — с SQLAlchemy и тестовой БД.
 
 ---
 
-## 12. Ограничения и backlog
+## 13. Ограничения и backlog
 
 - Синхронизация `selected_connections` → Airflow Variable `CLIENT_REGISTRY` — **нет**.
 - DAG `amo_*`, `return_*` без префикса маркетплейса — пустой список коннекшенов (by design).
@@ -388,7 +410,7 @@ PYTHONPATH=. python -m pytest tests/test_dag_platform.py -q
 
 ---
 
-## 13. Контакты и workspace
+## 14. Контакты и workspace
 
 Frappe workspace: **Airflow Manager** (`setup.py` / fixtures). Shortcuts: Connections, DAGs, Database Connections, Variables.
 

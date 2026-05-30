@@ -7,6 +7,7 @@ app_version = "0.1.0"
 app_include_js = [
     "public/js/dag_connections.js",
     "public/js/dag_table_configs.js",
+    "public/js/am_airflow_connection_list.js",
 ]
 app_include_css = []
 

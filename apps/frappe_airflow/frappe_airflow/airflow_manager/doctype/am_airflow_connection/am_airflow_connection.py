@@ -3,16 +3,13 @@ import frappe
 from frappe import _
 from frappe_airflow.airflow_db.connection_manager import (
     count_connections,
-    delete_connection,
     get_connection,
     list_connections,
     upsert_connection,
 )
 from frappe_airflow.airflow_db.connection_meta import pack_extra, unpack_extra
-from frappe_airflow.airflow_db.connection_sync import (
-    remove_companion_connections,
-    sync_companion_connections,
-)
+from frappe_airflow.airflow_db.connection_delete import delete_marketplace_connection
+from frappe_airflow.airflow_db.connection_sync import sync_companion_connections
 from frappe_airflow.airflow_db.dag_connection_sync import assign_connection_to_matching_dags
 from frappe_airflow.airflow_db.dag_platform import (
     CONN_TYPE_BY_PLATFORM,
@@ -140,12 +137,6 @@ def _sync_connection_registry(conn_id: str) -> None:
     rebuild_connection_registry_entry(conn_id)
 
 
-def _remove_connection_registry(conn_id: str) -> None:
-    from frappe_airflow.airflow_db.connection_registry_sync import remove_connection_registry_entry
-
-    remove_connection_registry_entry(conn_id)
-
-
 class AMAirflowConnection(VirtualAirflowDocument):
     def validate(self):
         if not (self.display_name or "").strip():
@@ -186,15 +177,8 @@ class AMAirflowConnection(VirtualAirflowDocument):
         sync_companion_connections(doc_data)
         _sync_connection_registry(payload["conn_id"])
 
-    def delete(self):
-        row = get_connection(self.name) or {}
-        meta = unpack_extra(row.get("extra"))
-        slug = meta.get("slug", "") or self.slug or ""
-        conn_type = row.get("conn_type") or self.conn_type or ""
-        conn_id = self.name
-        remove_companion_connections(conn_type, slug)
-        delete_connection(conn_id)
-        _remove_connection_registry(conn_id)
+    def delete(self, *args, **kwargs):
+        delete_marketplace_connection(self.name)
 
     @staticmethod
     def get_list(args):

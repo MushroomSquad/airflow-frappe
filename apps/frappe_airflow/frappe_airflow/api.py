@@ -6,6 +6,10 @@ import frappe
 from frappe import _
 from frappe.desk.listview import get_group_by_count as core_get_group_by_count
 
+from frappe_airflow.airflow_db.connection_delete import (
+    BULK_DELETE_LIMIT,
+    delete_marketplace_connection,
+)
 from frappe_airflow.airflow_db.dag_connection_options import build_dag_connection_options
 from frappe_airflow.airflow_db.dag_platform import (
     CONN_TYPE_BY_PLATFORM,
@@ -97,6 +101,47 @@ def import_airparse_xlsx(file_url: str) -> dict:
         frappe.throw(f"File not found on server: {file_path}")
 
     return import_from_xlsx(file_path)
+
+
+@frappe.whitelist()
+def bulk_delete_connections(conn_ids: list[str] | str | None = None) -> dict:
+    """Delete multiple marketplace connections with full cascade cleanup."""
+    if not frappe.has_permission("AM Airflow Connection", "delete"):
+        frappe.throw(_("Not permitted"), frappe.PermissionError)
+
+    if conn_ids is None:
+        conn_ids = []
+    elif isinstance(conn_ids, str):
+        conn_ids = json.loads(conn_ids) if conn_ids.strip().startswith("[") else [conn_ids]
+    elif not isinstance(conn_ids, list):
+        conn_ids = list(conn_ids)
+
+    conn_ids = [str(c).strip() for c in conn_ids if c and str(c).strip()]
+    if not conn_ids:
+        frappe.throw(_("Select at least one connection to delete"))
+
+    if len(conn_ids) > BULK_DELETE_LIMIT:
+        frappe.throw(_("You can delete at most {0} connections at once").format(BULK_DELETE_LIMIT))
+
+    deleted: list[str] = []
+    failed: list[dict[str, str]] = []
+    total = len(conn_ids)
+
+    for idx, conn_id in enumerate(conn_ids, start=1):
+        if total > 1:
+            frappe.publish_progress(
+                percent=idx / total * 100,
+                title=_("Deleting connections"),
+                description=conn_id,
+            )
+        try:
+            delete_marketplace_connection(conn_id)
+            deleted.append(conn_id)
+        except Exception as exc:
+            frappe.log_error(frappe.get_traceback(), f"bulk_delete_connections: {conn_id}")
+            failed.append({"conn_id": conn_id, "error": str(exc)})
+
+    return {"deleted": deleted, "failed": failed, "total": total}
 
 
 @frappe.whitelist()
