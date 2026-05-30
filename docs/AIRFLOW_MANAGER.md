@@ -372,7 +372,7 @@ Frappe UI **пишет в `AM DAG Config`**, не в Variable. Пока DAG-ко
 
 Код: `airflow_db/connection_delete.py`, API массового удаления: `frappe_airflow.api.bulk_delete_connections`.
 
-List view переопределяет стандартный Frappe bulk delete (порог 10 записей + фоновая очередь без ответа UI) на синхронный вызов `bulk_delete_connections` — см. `public/js/am_airflow_connection_list.js`.
+List view переопределяет стандартный Frappe bulk delete (порог 10 записей + фоновая очередь без ответа UI) на синхронный вызов через override `frappe.desk.reportview.delete_items` → `frappe_airflow.api.delete_items` — см. `hooks.py` и `public/js/am_airflow_connection_list.js`.
 
 ---
 

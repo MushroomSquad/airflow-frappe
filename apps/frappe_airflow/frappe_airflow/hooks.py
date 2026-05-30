@@ -31,5 +31,10 @@ doctype_js = {
 }
 
 override_whitelisted_methods = {
-    "frappe.desk.listview.get_group_by_count": "frappe_airflow.api.get_group_by_count"
+    "frappe.desk.listview.get_group_by_count": "frappe_airflow.api.get_group_by_count",
+    "frappe.desk.reportview.delete_items": "frappe_airflow.api.delete_items",
+}
+
+doctype_list_js = {
+    "AM Airflow Connection": "public/js/am_airflow_connection_list.js",
 }

@@ -144,6 +144,58 @@ def bulk_delete_connections(conn_ids: list[str] | str | None = None) -> dict:
     return {"deleted": deleted, "failed": failed, "total": total}
 
 
+@frappe.whitelist(methods=["POST", "DELETE"])
+def delete_items():
+    """Route list-view bulk delete for virtual marketplace connections."""
+    doctype = frappe.form_dict.get("doctype")
+    if doctype == "AM Airflow Connection":
+        return _delete_airflow_connection_items()
+
+    from frappe.desk.reportview import delete_items as core_delete_items
+
+    return core_delete_items()
+
+
+def _delete_airflow_connection_items() -> list[str]:
+    """Sync bulk delete used by list view Actions → Delete."""
+    raw = frappe.form_dict.get("items") or "[]"
+    items = sorted(json.loads(raw), reverse=True)
+    if not items:
+        frappe.throw(_("Select at least one connection to delete"))
+
+    result = bulk_delete_connections(items)
+    deleted = result.get("deleted") or []
+    failed = result.get("failed") or []
+
+    if failed and not deleted:
+        frappe.msgprint(
+            _("Failed to delete {0} documents: {1}").format(
+                len(failed),
+                ", ".join(row["conn_id"] for row in failed),
+            ),
+            realtime=True,
+            title=_("Bulk Operation Failed"),
+        )
+    elif failed:
+        frappe.msgprint(
+            _("Deleted {0}, failed {1}: {2}").format(
+                len(deleted),
+                len(failed),
+                ", ".join(row["conn_id"] for row in failed),
+            ),
+            realtime=True,
+            title=_("Bulk Operation Partial"),
+        )
+    elif deleted:
+        frappe.msgprint(
+            _("Deleted {0} connection(s) successfully").format(len(deleted)),
+            realtime=True,
+            title=_("Bulk Operation Successful"),
+        )
+
+    return [row["conn_id"] for row in failed]
+
+
 @frappe.whitelist()
 def get_dag_table_configs(dag_id: str) -> list[dict]:
     """List AM Table Config rows for a DAG (for embedded DAG form UI)."""

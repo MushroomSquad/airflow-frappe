@@ -22,6 +22,7 @@ def _default_throw(msg, exc=None):
 _frappe = SimpleNamespace(
     throw=_default_throw,
     whitelist=lambda **kwargs: lambda fn: fn,
+    form_dict={},
     db=SimpleNamespace(
         exists=MagicMock(return_value=True),
         delete=MagicMock(),
@@ -179,6 +180,44 @@ def test_bulk_delete_connections_parses_json_string():
     assert del_fn.call_count == 2
 
 
+def test_delete_items_routes_airflow_connections():
+    _reset_frappe_mocks()
+    _ensure_frappe_package_stubs()
+    from frappe_airflow import api as api_module
+
+    _frappe.form_dict = {
+        "doctype": "AM Airflow Connection",
+        "items": json.dumps(["wb_a", "wb_b"]),
+    }
+    with patch(
+        "frappe_airflow.api.bulk_delete_connections",
+        return_value={"deleted": ["wb_a", "wb_b"], "failed": [], "total": 2},
+    ) as bulk_fn, patch("frappe_airflow.api._delete_airflow_connection_items") as inner:
+        inner.return_value = []
+        result = api_module.delete_items()
+    inner.assert_called_once()
+    bulk_fn.assert_not_called()
+
+
+def test_delete_items_delegates_other_doctypes():
+    _reset_frappe_mocks()
+    _ensure_frappe_package_stubs()
+    from frappe_airflow import api as api_module
+
+    _frappe.form_dict = {"doctype": "User", "items": "[]"}
+    core_fn = MagicMock(return_value=[])
+    fake_reportview = ModuleType("frappe.desk.reportview")
+    fake_reportview.delete_items = core_fn
+    sys.modules["frappe.desk.reportview"] = fake_reportview
+    if not hasattr(_frappe, "desk"):
+        _frappe.desk = ModuleType("frappe.desk")
+    _frappe.desk.reportview = fake_reportview
+
+    result = api_module.delete_items()
+    core_fn.assert_called_once()
+    assert result == []
+
+
 if __name__ == "__main__":
     for fn in [
         test_remove_connection_from_all_dag_configs_updates_matching_dags,
@@ -187,6 +226,8 @@ if __name__ == "__main__":
         test_bulk_delete_connections_collects_failures,
         test_bulk_delete_connections_rejects_empty_list,
         test_bulk_delete_connections_parses_json_string,
+        test_delete_items_routes_airflow_connections,
+        test_delete_items_delegates_other_doctypes,
     ]:
         fn()
         print("ok", fn.__name__)
