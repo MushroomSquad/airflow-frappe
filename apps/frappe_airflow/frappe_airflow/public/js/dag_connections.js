@@ -94,6 +94,15 @@
     return $mount;
   }
 
+  function sync_selected_connections(frm, $mount) {
+    const conn_ids = [];
+    $mount.find('input[type="checkbox"]:checked').each((_, el) => {
+      conn_ids.push($(el).attr("data-conn-id"));
+    });
+    frm.doc.selected_connections = JSON.stringify(conn_ids);
+    frm.dirty();
+  }
+
   function paint_inline_checkboxes(frm, $mount, options) {
     const selected = new Set(parse_selected_connections(frm.doc.selected_connections));
 
@@ -105,6 +114,17 @@
       );
       return;
     }
+
+    const $toolbar = $(`
+      <div class="dag-conn-toolbar" style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+        <button type="button" class="btn btn-default btn-sm btn-select-all-connections">
+          ${__("Select all")}
+        </button>
+        <button type="button" class="btn btn-default btn-sm btn-deselect-all-connections">
+          ${__("Deselect all")}
+        </button>
+      </div>
+    `);
 
     const $grid = $('<div class="dag-conn-checkboxes">').css({
       display: "grid",
@@ -125,15 +145,20 @@
       `);
     });
 
-    $mount.empty().append($grid);
+    $toolbar.find(".btn-select-all-connections").on("click", () => {
+      $mount.find('input[type="checkbox"]').prop("checked", true);
+      sync_selected_connections(frm, $mount);
+    });
+
+    $toolbar.find(".btn-deselect-all-connections").on("click", () => {
+      $mount.find('input[type="checkbox"]').prop("checked", false);
+      sync_selected_connections(frm, $mount);
+    });
+
+    $mount.empty().append($toolbar).append($grid);
 
     $mount.find('input[type="checkbox"]').off("change").on("change", () => {
-      const conn_ids = [];
-      $mount.find('input[type="checkbox"]:checked').each((_, el) => {
-        conn_ids.push($(el).attr("data-conn-id"));
-      });
-      frm.doc.selected_connections = JSON.stringify(conn_ids);
-      frm.dirty();
+      sync_selected_connections(frm, $mount);
     });
   }
 
