@@ -32,6 +32,7 @@ def _setup_workspace():
     shortcuts_data = [
         ("Connections", "AM Airflow Connection", "Orange"),
         ("Databases", "AM Database Connection", "Orange"),
+        ("Clients", "AM Client", "Orange"),
         ("DAGs", "AM Airflow DAG", "Gray"),
         ("Table Configs", "AM Table Config", "Green"),
     ]

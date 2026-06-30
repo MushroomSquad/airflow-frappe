@@ -1,0 +1,11 @@
+{
+  "name": "AM Client",
+  "doctype": "DocType",
+  "module": "Airflow Manager",
+  "autoname": "field:client_name",
+  "title_field": "client_name",
+  "fields": [
+    {"fieldname": "client_name", "fieldtype": "Data", "label": "Client Name", "reqd": 1, "unique": 1, "in_list_view": 1}
+  ],
+  "permissions": [{"role": "System Manager", "read": 1, "write": 1, "create": 1, "delete": 1}]
+}

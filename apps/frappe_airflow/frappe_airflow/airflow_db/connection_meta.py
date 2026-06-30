@@ -5,7 +5,7 @@ import json
 from typing import Any
 
 
-_META_KEYS = ("platform", "slug", "display_name", "target_db_connection")
+_META_KEYS = ("platform", "slug", "display_name", "target_db_connection", "client")
 
 
 def pack_extra(

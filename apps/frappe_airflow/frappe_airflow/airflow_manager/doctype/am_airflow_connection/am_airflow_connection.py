@@ -94,6 +94,7 @@ def _to_airflow_payload(doc, existing_extra: str | None = None) -> dict:
             slug=doc_data.get("slug", ""),
             display_name=doc_data.get("display_name", ""),
             target_db_connection=doc_data.get("target_db_connection", ""),
+            client=doc_data.get("client", ""),
             existing_extra=merged_extra,
             **_frappe_meta_kwargs(doc_data, merged_extra),
         ),
@@ -120,6 +121,7 @@ def _from_airflow_row(row: dict) -> dict:
         "slug": meta.get("slug") or profile.get("slug", ""),
         "display_name": meta.get("display_name", ""),
         "target_db_connection": meta.get("target_db_connection", ""),
+        "client": meta.get("client", ""),
         "frappe_creation": meta.get("frappe_creation", ""),
         "frappe_owner": meta.get("frappe_owner", ""),
     }
@@ -135,6 +137,12 @@ def _sync_connection_registry(conn_id: str) -> None:
     from frappe_airflow.airflow_db.connection_registry_sync import rebuild_connection_registry_entry
 
     rebuild_connection_registry_entry(conn_id)
+
+
+def _sync_client_directory() -> None:
+    from frappe_airflow.airflow_db.client_directory_sync import rebuild_client_directory
+
+    rebuild_client_directory()
 
 
 class AMAirflowConnection(VirtualAirflowDocument):
@@ -168,6 +176,7 @@ class AMAirflowConnection(VirtualAirflowDocument):
         if frappe.utils.cint(doc_data.get("assign_to_matching_dags", 1)):
             assign_connection_to_matching_dags(payload["conn_id"], payload["conn_type"])
         _sync_connection_registry(payload["conn_id"])
+        _sync_client_directory()
 
     def db_update(self, *args, **kwargs):
         doc_data = self.as_dict()
@@ -176,6 +185,7 @@ class AMAirflowConnection(VirtualAirflowDocument):
         upsert_connection(payload)
         sync_companion_connections(doc_data)
         _sync_connection_registry(payload["conn_id"])
+        _sync_client_directory()
 
     def delete(self, *args, **kwargs):
         delete_marketplace_connection(self.name)

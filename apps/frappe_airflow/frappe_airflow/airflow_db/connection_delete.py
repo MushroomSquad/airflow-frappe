@@ -6,6 +6,7 @@ import frappe
 from frappe_airflow.airflow_db.connection_manager import delete_connection, get_connection
 from frappe_airflow.airflow_db.connection_meta import unpack_extra
 from frappe_airflow.airflow_db.connection_registry_sync import remove_connection_registry_entry
+from frappe_airflow.airflow_db.client_directory_sync import rebuild_client_directory
 from frappe_airflow.airflow_db.connection_sync import remove_companion_connections
 from frappe_airflow.airflow_db.dag_connection_sync import (
     get_selected_connections,
@@ -75,5 +76,6 @@ def delete_marketplace_connection(conn_id: str) -> None:
     remove_companion_connections(conn_type, slug)
     delete_connection(conn_id)
     remove_connection_registry_entry(conn_id)
+    rebuild_client_directory()
 
     frappe.db.commit()

@@ -5,6 +5,7 @@ import frappe
 
 from frappe_airflow.airflow_db.config_sync import reload_dag_table_config_from_db
 from frappe_airflow.airflow_db.connection_registry_sync import rebuild_connection_registry
+from frappe_airflow.airflow_db.client_directory_sync import rebuild_client_directory
 from frappe_airflow.airflow_db.dag_registry_sync import rebuild_dag_registry
 
 
@@ -18,6 +19,7 @@ def run(*, sync_table_configs: bool = True) -> dict:
     """
     rebuild_connection_registry()
     rebuild_dag_registry()
+    rebuild_client_directory()
 
     table_dags: list[str] = []
     if sync_table_configs and frappe.db.exists("DocType", "AM Table Config"):
@@ -34,6 +36,7 @@ def run(*, sync_table_configs: bool = True) -> dict:
     return {
         "connection_registry": True,
         "dag_registry": True,
+        "client_directory": True,
         "table_config_dags": len(table_dags),
         "stale_purged": purged,
     }
